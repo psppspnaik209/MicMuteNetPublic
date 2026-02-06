@@ -39,12 +39,14 @@ public partial class App : Application
         services.AddSingleton<IAudioDeviceService, AudioDeviceService>();
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IHotkeyService, HotkeyService>();
+        services.AddSingleton<INotificationService, NotificationService>();
 
         // Register ViewModels
         services.AddTransient<MainViewModel>();
 
         // Register Views
         services.AddTransient<MainWindow>();
+        services.AddSingleton<OverlayWindow>();
 
         Services = services.BuildServiceProvider();
     }

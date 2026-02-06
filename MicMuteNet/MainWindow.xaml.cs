@@ -23,6 +23,8 @@ public sealed partial class MainWindow : Window
     private readonly MainViewModel _viewModel;
     private readonly IHotkeyService _hotkeyService;
     private readonly ISettingsService _settingsService;
+    private readonly INotificationService _notificationService;
+    private readonly OverlayWindow _overlayWindow;
     private TaskbarIcon? _trayIcon;
     private bool _isExiting;
     private bool _isCapturingHotkey;
@@ -33,6 +35,8 @@ public sealed partial class MainWindow : Window
         _viewModel = viewModel;
         _hotkeyService = App.Services.GetRequiredService<IHotkeyService>();
         _settingsService = App.Services.GetRequiredService<ISettingsService>();
+        _notificationService = App.Services.GetRequiredService<INotificationService>();
+        _overlayWindow = App.Services.GetRequiredService<OverlayWindow>();
         
         InitializeComponent();
 
@@ -85,6 +89,9 @@ public sealed partial class MainWindow : Window
 
         // Load and register hotkey from settings
         LoadHotkeyFromSettings();
+
+        // Load settings to UI
+        LoadSettingsToUI();
 
         UpdateMuteUI();
     }
@@ -214,6 +221,8 @@ public sealed partial class MainWindow : Window
                 case nameof(MainViewModel.IsMuted):
                     UpdateMuteUI();
                     UpdateTrayIcon();
+                    PlayNotificationSound();
+                    ShowOverlay();
                     break;
                 case nameof(MainViewModel.Devices):
                     RefreshDeviceList();
@@ -238,6 +247,26 @@ public sealed partial class MainWindow : Window
         MuteDescriptionText.Text = _viewModel.IsMuted
             ? "Microphone is muted"
             : "Microphone is active";
+    }
+
+    private void PlayNotificationSound()
+    {
+        if (_settingsService.Settings.NotificationEnabled)
+        {
+            _notificationService.Volume = _settingsService.Settings.NotificationVolume;
+            if (_viewModel.IsMuted)
+                _notificationService.PlayMutedSound();
+            else
+                _notificationService.PlayUnmutedSound();
+        }
+    }
+
+    private void ShowOverlay()
+    {
+        if (_settingsService.Settings.OverlayEnabled)
+        {
+            _overlayWindow.ShowMuteStatus(_viewModel.IsMuted);
+        }
     }
 
     private void RefreshDeviceList()
@@ -461,5 +490,73 @@ public sealed partial class MainWindow : Window
         // Save to settings
         _settingsService.Settings.Hotkey = _pendingHotkey;
         _ = _settingsService.SaveAsync();
+    }
+
+    // Settings event handlers
+    private void NotificationEnabled_Changed(object sender, RoutedEventArgs e)
+    {
+        _settingsService.Settings.NotificationEnabled = NotificationEnabledCheckBox.IsChecked == true;
+        _ = _settingsService.SaveAsync();
+    }
+
+    private void OverlayEnabled_Changed(object sender, RoutedEventArgs e)
+    {
+        _settingsService.Settings.OverlayEnabled = OverlayEnabledCheckBox.IsChecked == true;
+        _ = _settingsService.SaveAsync();
+    }
+
+    private void StartWithWindows_Changed(object sender, RoutedEventArgs e)
+    {
+        _settingsService.Settings.RunAtStartup = StartWithWindowsCheckBox.IsChecked == true;
+        SetStartWithWindows(_settingsService.Settings.RunAtStartup);
+        _ = _settingsService.SaveAsync();
+    }
+
+    private void StartMinimized_Changed(object sender, RoutedEventArgs e)
+    {
+        _settingsService.Settings.StartMinimized = StartMinimizedCheckBox.IsChecked == true;
+        _ = _settingsService.SaveAsync();
+    }
+
+    private void SetStartWithWindows(bool enable)
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
+            
+            if (key == null) return;
+            
+            const string appName = "MicMuteNet";
+            
+            if (enable)
+            {
+                // Get the executable path from the package
+                var exePath = Environment.ProcessPath ?? "";
+                if (!string.IsNullOrEmpty(exePath))
+                {
+                    key.SetValue(appName, $"\"{exePath}\"");
+                    StatusText.Text = "Startup enabled";
+                }
+            }
+            else
+            {
+                key.DeleteValue(appName, false);
+                StatusText.Text = "Startup disabled";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Failed to set startup: {ex.Message}";
+            System.Diagnostics.Debug.WriteLine($"Startup registry error: {ex}");
+        }
+    }
+
+    private void LoadSettingsToUI()
+    {
+        NotificationEnabledCheckBox.IsChecked = _settingsService.Settings.NotificationEnabled;
+        OverlayEnabledCheckBox.IsChecked = _settingsService.Settings.OverlayEnabled;
+        StartWithWindowsCheckBox.IsChecked = _settingsService.Settings.RunAtStartup;
+        StartMinimizedCheckBox.IsChecked = _settingsService.Settings.StartMinimized;
     }
 }

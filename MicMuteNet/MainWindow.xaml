@@ -200,6 +200,40 @@
                 </StackPanel>
             </Border>
 
+            <!-- Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="8"
+                Padding="16">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Settings"
+                        Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                    <StackPanel Spacing="8">
+                        <CheckBox x:Name="NotificationEnabledCheckBox"
+                            Content="Play notification sounds"
+                            IsChecked="True"
+                            Checked="NotificationEnabled_Changed"
+                            Unchecked="NotificationEnabled_Changed" />
+
+                        <CheckBox x:Name="OverlayEnabledCheckBox"
+                            Content="Show on-screen overlay"
+                            IsChecked="True"
+                            Checked="OverlayEnabled_Changed"
+                            Unchecked="OverlayEnabled_Changed" />
+
+                        <CheckBox x:Name="StartWithWindowsCheckBox"
+                            Content="Start with Windows"
+                            Checked="StartWithWindows_Changed"
+                            Unchecked="StartWithWindows_Changed" />
+
+                        <CheckBox x:Name="StartMinimizedCheckBox"
+                            Content="Start minimized"
+                            Checked="StartMinimized_Changed"
+                            Unchecked="StartMinimized_Changed" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <!-- Status Bar -->
             <TextBlock x:Name="StatusText"
                 Text="Ready"

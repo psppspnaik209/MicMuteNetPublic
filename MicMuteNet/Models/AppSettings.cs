@@ -62,12 +62,14 @@ public sealed class AppSettings
     public HotkeyConfiguration? HotkeyAlt { get; set; }
 
     // Overlay settings
+    public bool OverlayEnabled { get; set; } = true;
     public OverlayVisibilityMode OverlayVisibility { get; set; } = OverlayVisibilityMode.Hidden;
     public double OverlayOpacity { get; set; } = 1.0;
     public double OverlayX { get; set; }
     public double OverlayY { get; set; }
 
     // Notification settings
+    public bool NotificationEnabled { get; set; } = true;
     public bool NotificationsEnabled { get; set; } = true;
     public string MuteSound { get; set; } = "Beep300";
     public string UnmuteSound { get; set; } = "Beep750";
