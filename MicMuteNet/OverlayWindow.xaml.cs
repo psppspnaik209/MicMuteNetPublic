@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Media;
 using Windows.Graphics;
 using WinRT.Interop;
 
@@ -9,6 +10,7 @@ namespace MicMuteNet;
 
 /// <summary>
 /// Transparent overlay window that shows mute status.
+/// Positioned at center-bottom of primary monitor.
 /// </summary>
 public sealed partial class OverlayWindow : Window
 {
@@ -26,12 +28,12 @@ public sealed partial class OverlayWindow : Window
 
     private bool _isMuted;
     private DispatcherTimer? _hideTimer;
+    private double _opacity = 0.8;
 
     public OverlayWindow()
     {
         InitializeComponent();
         
-        // Configure window
         Title = "MicMuteNet Overlay";
         
         // Set up hide timer
@@ -61,13 +63,13 @@ public sealed partial class OverlayWindow : Window
         var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
         var appWindow = AppWindow.GetFromWindowId(windowId);
 
-        // Set size and position
-        appWindow.Resize(new SizeInt32(200, 80));
+        // Set size
+        appWindow.Resize(new SizeInt32(280, 100));
         
-        // Position in top-right corner
+        // Position at center-bottom of primary monitor
         var displayArea = DisplayArea.GetFromWindowId(windowId, DisplayAreaFallback.Primary);
-        var x = displayArea.WorkArea.Width - 220;
-        var y = 20;
+        var x = (displayArea.WorkArea.Width - 280) / 2;
+        var y = displayArea.WorkArea.Height - 150; // 150px from bottom
         appWindow.Move(new PointInt32(x, y));
 
         // Make window click-through and always on top
@@ -83,27 +85,22 @@ public sealed partial class OverlayWindow : Window
         }
     }
 
+    /// <summary>
+    /// Sets the overlay opacity (0.0 to 1.0).
+    /// </summary>
+    public void SetOpacity(double opacity)
+    {
+        _opacity = Math.Clamp(opacity, 0.2, 1.0);
+        UpdateVisuals();
+    }
+
     public void ShowMuteStatus(bool isMuted, bool autoHide = true)
     {
         _isMuted = isMuted;
 
         DispatcherQueue.TryEnqueue(() =>
         {
-            // Update visuals
-            if (isMuted)
-            {
-                MuteIcon.Glyph = "\uEE56"; // Muted icon
-                StatusText.Text = "Muted";
-                OverlayBorder.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                    Windows.UI.Color.FromArgb(204, 200, 50, 50)); // Red tint
-            }
-            else
-            {
-                MuteIcon.Glyph = "\uE720"; // Microphone icon
-                StatusText.Text = "Unmuted";
-                OverlayBorder.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                    Windows.UI.Color.FromArgb(204, 50, 150, 50)); // Green tint
-            }
+            UpdateVisuals();
 
             // Show window
             ShowOverlay();
@@ -115,6 +112,42 @@ public sealed partial class OverlayWindow : Window
                 _hideTimer?.Start();
             }
         });
+    }
+
+    private void UpdateVisuals()
+    {
+        // Calculate alpha from opacity
+        byte alpha = (byte)(_opacity * 255);
+        byte backgroundAlpha = (byte)(_opacity * 204); // 80% of full opacity for background
+
+        if (_isMuted)
+        {
+            // Muted - Red theme
+            MuteIcon.Glyph = "\uEE56"; // Muted icon
+            StatusText.Text = "MUTED";
+            SubStatusText.Text = "Microphone is muted";
+            
+            OverlayBorder.Background = new SolidColorBrush(
+                Windows.UI.Color.FromArgb(backgroundAlpha, 180, 50, 50));
+            OverlayBorder.BorderBrush = new SolidColorBrush(
+                Windows.UI.Color.FromArgb(alpha, 255, 100, 100));
+            IconBackground.Fill = new SolidColorBrush(
+                Windows.UI.Color.FromArgb((byte)(_opacity * 80), 255, 80, 80));
+        }
+        else
+        {
+            // Unmuted - Green theme
+            MuteIcon.Glyph = "\uE720"; // Microphone icon
+            StatusText.Text = "UNMUTED";
+            SubStatusText.Text = "Microphone is active";
+            
+            OverlayBorder.Background = new SolidColorBrush(
+                Windows.UI.Color.FromArgb(backgroundAlpha, 26, 26, 46));
+            OverlayBorder.BorderBrush = new SolidColorBrush(
+                Windows.UI.Color.FromArgb(alpha, 80, 200, 120));
+            IconBackground.Fill = new SolidColorBrush(
+                Windows.UI.Color.FromArgb((byte)(_opacity * 80), 80, 200, 120));
+        }
     }
 
     private void ShowOverlay()

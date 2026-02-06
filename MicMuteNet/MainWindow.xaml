@@ -200,32 +200,91 @@
                 </StackPanel>
             </Border>
 
-            <!-- Settings -->
+            <!-- Sound Settings -->
             <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 CornerRadius="8"
                 Padding="16">
                 <StackPanel Spacing="12">
-                    <TextBlock Text="Settings"
+                    <TextBlock Text="Sound Effects" 
                         Style="{StaticResource BodyStrongTextBlockStyle}" />
-
+                    
+                    <CheckBox x:Name="NotificationEnabledCheckBox"
+                        Content="Play notification sounds"
+                        IsChecked="True"
+                        Checked="NotificationEnabled_Changed"
+                        Unchecked="NotificationEnabled_Changed" />
+                    
+                    <!-- Sound Volume -->
+                    <StackPanel x:Name="SoundVolumePanel" Spacing="4">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Sound Volume" VerticalAlignment="Center" />
+                            <TextBlock x:Name="SoundVolumeText" Grid.Column="1" Text="50%" />
+                        </Grid>
+                        <Slider x:Name="SoundVolumeSlider"
+                            Minimum="0" Maximum="100" Value="50"
+                            ValueChanged="SoundVolume_Changed" />
+                    </StackPanel>
+                    
+                    <!-- Output Device -->
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Output Device" />
+                        <ComboBox x:Name="OutputDeviceComboBox"
+                            HorizontalAlignment="Stretch"
+                            DisplayMemberPath="Name"
+                            SelectionChanged="OutputDevice_Changed" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+            
+            <!-- Overlay Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="8"
+                Padding="16">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="On-Screen Overlay" 
+                        Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    
+                    <CheckBox x:Name="OverlayEnabledCheckBox"
+                        Content="Show on-screen overlay"
+                        IsChecked="True"
+                        Checked="OverlayEnabled_Changed"
+                        Unchecked="OverlayEnabled_Changed" />
+                    
+                    <!-- Overlay Transparency -->
+                    <StackPanel x:Name="OverlayTransparencyPanel" Spacing="4">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Overlay Opacity" VerticalAlignment="Center" />
+                            <TextBlock x:Name="OverlayOpacityText" Grid.Column="1" Text="80%" />
+                        </Grid>
+                        <Slider x:Name="OverlayOpacitySlider"
+                            Minimum="20" Maximum="100" Value="80"
+                            ValueChanged="OverlayOpacity_Changed" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+            
+            <!-- Startup Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="8"
+                Padding="16">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Startup" 
+                        Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    
                     <StackPanel Spacing="8">
-                        <CheckBox x:Name="NotificationEnabledCheckBox"
-                            Content="Play notification sounds"
-                            IsChecked="True"
-                            Checked="NotificationEnabled_Changed"
-                            Unchecked="NotificationEnabled_Changed" />
-
-                        <CheckBox x:Name="OverlayEnabledCheckBox"
-                            Content="Show on-screen overlay"
-                            IsChecked="True"
-                            Checked="OverlayEnabled_Changed"
-                            Unchecked="OverlayEnabled_Changed" />
-
                         <CheckBox x:Name="StartWithWindowsCheckBox"
                             Content="Start with Windows"
                             Checked="StartWithWindows_Changed"
                             Unchecked="StartWithWindows_Changed" />
-
+                        
                         <CheckBox x:Name="StartMinimizedCheckBox"
                             Content="Start minimized"
                             Checked="StartMinimized_Changed"

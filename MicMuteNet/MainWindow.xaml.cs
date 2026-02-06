@@ -554,9 +554,71 @@ public sealed partial class MainWindow : Window
 
     private void LoadSettingsToUI()
     {
-        NotificationEnabledCheckBox.IsChecked = _settingsService.Settings.NotificationEnabled;
-        OverlayEnabledCheckBox.IsChecked = _settingsService.Settings.OverlayEnabled;
-        StartWithWindowsCheckBox.IsChecked = _settingsService.Settings.RunAtStartup;
-        StartMinimizedCheckBox.IsChecked = _settingsService.Settings.StartMinimized;
+        var settings = _settingsService.Settings;
+        
+        // Notification settings
+        NotificationEnabledCheckBox.IsChecked = settings.NotificationEnabled;
+        SoundVolumeSlider.Value = settings.NotificationVolume * 100;
+        SoundVolumeText.Text = $"{(int)(settings.NotificationVolume * 100)}%";
+        
+        // Load output devices
+        if (_notificationService is NotificationService ns)
+        {
+            var devices = ns.GetOutputDevices();
+            OutputDeviceComboBox.ItemsSource = devices;
+            
+            // Select the saved device or default
+            var selectedDevice = devices.FirstOrDefault(d => d.DeviceNumber == settings.OutputDeviceNumber)
+                                 ?? devices.FirstOrDefault();
+            OutputDeviceComboBox.SelectedItem = selectedDevice;
+        }
+        
+        // Overlay settings
+        OverlayEnabledCheckBox.IsChecked = settings.OverlayEnabled;
+        OverlayOpacitySlider.Value = settings.OverlayOpacity * 100;
+        OverlayOpacityText.Text = $"{(int)(settings.OverlayOpacity * 100)}%";
+        _overlayWindow.SetOpacity(settings.OverlayOpacity);
+        
+        // Startup settings
+        StartWithWindowsCheckBox.IsChecked = settings.RunAtStartup;
+        StartMinimizedCheckBox.IsChecked = settings.StartMinimized;
+    }
+
+    private void SoundVolume_Changed(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        var volume = (float)(e.NewValue / 100.0);
+        if (SoundVolumeText != null)
+            SoundVolumeText.Text = $"{(int)e.NewValue}%";
+        
+        _settingsService.Settings.NotificationVolume = volume;
+        if (_notificationService is NotificationService ns)
+        {
+            ns.Volume = volume;
+        }
+        _ = _settingsService.SaveAsync();
+    }
+
+    private void OutputDevice_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (OutputDeviceComboBox.SelectedItem is OutputDevice device)
+        {
+            _settingsService.Settings.OutputDeviceNumber = device.DeviceNumber;
+            if (_notificationService is NotificationService ns)
+            {
+                ns.OutputDeviceNumber = device.DeviceNumber;
+            }
+            _ = _settingsService.SaveAsync();
+        }
+    }
+
+    private void OverlayOpacity_Changed(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        var opacity = e.NewValue / 100.0;
+        if (OverlayOpacityText != null)
+            OverlayOpacityText.Text = $"{(int)e.NewValue}%";
+        
+        _settingsService.Settings.OverlayOpacity = opacity;
+        _overlayWindow.SetOpacity(opacity);
+        _ = _settingsService.SaveAsync();
     }
 }

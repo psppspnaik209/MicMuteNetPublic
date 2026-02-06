@@ -1,10 +1,11 @@
-using System.Media;
+using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
 namespace MicMuteNet.Services;
 
 /// <summary>
 /// Audio notification service using NAudio for WAV playback.
+/// Supports output device selection.
 /// </summary>
 public sealed class NotificationService : INotificationService
 {
@@ -16,12 +17,32 @@ public sealed class NotificationService : INotificationService
 
     public bool Enabled { get; set; } = true;
     public float Volume { get; set; } = 0.5f;
+    public int OutputDeviceNumber { get; set; } = -1; // -1 = default device
 
     public NotificationService()
     {
         var basePath = Path.Combine(AppContext.BaseDirectory, "Assets", "Sounds");
         _mutedSoundPath = Path.Combine(basePath, "beep300.wav");    // Lower beep for muted
         _unmutedSoundPath = Path.Combine(basePath, "beep750.wav");  // Higher beep for unmuted
+    }
+
+    /// <summary>
+    /// Gets available output devices for sound playback.
+    /// </summary>
+    public List<OutputDevice> GetOutputDevices()
+    {
+        var devices = new List<OutputDevice>
+        {
+            new OutputDevice { DeviceNumber = -1, Name = "Default Device" }
+        };
+
+        for (int i = 0; i < WaveOut.DeviceCount; i++)
+        {
+            var caps = WaveOut.GetCapabilities(i);
+            devices.Add(new OutputDevice { DeviceNumber = i, Name = caps.ProductName });
+        }
+
+        return devices;
     }
 
     public void PlayMutedSound()
@@ -58,7 +79,10 @@ public sealed class NotificationService : INotificationService
                     _audioFile = new AudioFileReader(filePath);
                     _audioFile.Volume = Volume;
                     
-                    _waveOut = new WaveOutEvent();
+                    _waveOut = new WaveOutEvent
+                    {
+                        DeviceNumber = OutputDeviceNumber
+                    };
                     _waveOut.Init(_audioFile);
                     _waveOut.Play();
 
@@ -91,4 +115,13 @@ public sealed class NotificationService : INotificationService
             _audioFile?.Dispose();
         }
     }
+}
+
+/// <summary>
+/// Represents an audio output device.
+/// </summary>
+public class OutputDevice
+{
+    public int DeviceNumber { get; set; }
+    public string Name { get; set; } = "";
 }

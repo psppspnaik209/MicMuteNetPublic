@@ -9,24 +9,48 @@
     Title="MicMuteNet Overlay">
 
     <Grid>
+        <!-- Modern glassmorphism style overlay -->
         <Border x:Name="OverlayBorder"
-            Background="#CC000000"
-            CornerRadius="16"
-            Padding="16"
+            Background="#CC1A1A2E"
+            CornerRadius="24"
+            Padding="24,16"
+            BorderBrush="#4488CCFF"
+            BorderThickness="1"
             HorizontalAlignment="Center"
             VerticalAlignment="Center">
-            <StackPanel Orientation="Horizontal" Spacing="12">
-                <FontIcon x:Name="MuteIcon"
-                    FontFamily="{StaticResource SymbolThemeFontFamily}"
-                    Glyph="&#xE720;"
-                    FontSize="32"
-                    Foreground="White" />
-                <TextBlock x:Name="StatusText"
-                    Text="Unmuted"
-                    FontSize="24"
-                    FontWeight="SemiBold"
-                    Foreground="White"
-                    VerticalAlignment="Center" />
+
+            <Border.Shadow>
+                <ThemeShadow />
+            </Border.Shadow>
+
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <!-- Animated icon circle -->
+                <Grid Width="48" Height="48">
+                    <Ellipse x:Name="IconBackground"
+                        Fill="#4450C878"
+                        Width="48" Height="48" />
+                    <FontIcon x:Name="MuteIcon"
+                        FontFamily="{StaticResource SymbolThemeFontFamily}"
+                        Glyph="&#xE720;"
+                        FontSize="24"
+                        Foreground="White"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center" />
+                </Grid>
+
+                <!-- Status text -->
+                <StackPanel VerticalAlignment="Center" Spacing="2">
+                    <TextBlock x:Name="StatusText"
+                        Text="UNMUTED"
+                        FontSize="18"
+                        FontWeight="Bold"
+                        Foreground="White"
+                        CharacterSpacing="100" />
+                    <TextBlock x:Name="SubStatusText"
+                        Text="Microphone is active"
+                        FontSize="12"
+                        Foreground="#99FFFFFF" />
+                </StackPanel>
             </StackPanel>
         </Border>
     </Grid>

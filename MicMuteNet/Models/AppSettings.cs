@@ -70,11 +70,8 @@ public sealed class AppSettings
 
     // Notification settings
     public bool NotificationEnabled { get; set; } = true;
-    public bool NotificationsEnabled { get; set; } = true;
-    public string MuteSound { get; set; } = "Beep300";
-    public string UnmuteSound { get; set; } = "Beep750";
-    public float NotificationVolume { get; set; } = 1.0f;
-    public string? OutputDeviceId { get; set; }
+    public float NotificationVolume { get; set; } = 0.5f;
+    public int OutputDeviceNumber { get; set; } = -1; // -1 = default device
 
     // Startup settings
     public bool RunAtStartup { get; set; }
