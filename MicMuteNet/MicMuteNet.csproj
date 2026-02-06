@@ -33,6 +33,7 @@
     <PackageReference Include="H.NotifyIcon.WinUI" Version="2.2.0" />
   </ItemGroup>
 
+
   <!-- Assets -->
   <ItemGroup>
     <Content Include="Assets\Icons\*.ico">
@@ -43,11 +44,7 @@
     </Content>
   </ItemGroup>
 
-  <!-- Publish Properties -->
-  <PropertyGroup>
-    <PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>
-    <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
-    <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
-    <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
-  </PropertyGroup>
+  <!-- Publish properties are passed via dotnet publish CLI, not in csproj -->
+  <!-- Example: dotnet publish -c Release -r win-x64 self-contained
+  -p:WindowsAppSDKSelfContained=true -->
 </Project>

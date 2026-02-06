@@ -188,8 +188,8 @@
                     <!-- Options -->
                     <StackPanel Orientation="Horizontal" Spacing="16">
                         <CheckBox x:Name="SuppressHotkeyCheckBox"
-                            Content="Suppress key"
-                            IsChecked="True"
+                            Content="Suppress key (blocks key for other apps)"
+                            IsChecked="False"
                             Checked="HotkeyOptions_Changed"
                             Unchecked="HotkeyOptions_Changed" />
                         <CheckBox x:Name="IgnoreModifiersCheckBox"
@@ -205,15 +205,15 @@
                 CornerRadius="8"
                 Padding="16">
                 <StackPanel Spacing="12">
-                    <TextBlock Text="Sound Effects" 
+                    <TextBlock Text="Sound Effects"
                         Style="{StaticResource BodyStrongTextBlockStyle}" />
-                    
+
                     <CheckBox x:Name="NotificationEnabledCheckBox"
                         Content="Play notification sounds"
                         IsChecked="True"
                         Checked="NotificationEnabled_Changed"
                         Unchecked="NotificationEnabled_Changed" />
-                    
+
                     <!-- Sound Volume -->
                     <StackPanel x:Name="SoundVolumePanel" Spacing="4">
                         <Grid>
@@ -228,7 +228,7 @@
                             Minimum="0" Maximum="100" Value="50"
                             ValueChanged="SoundVolume_Changed" />
                     </StackPanel>
-                    
+
                     <!-- Output Device -->
                     <StackPanel Spacing="4">
                         <TextBlock Text="Output Device" />
@@ -239,21 +239,21 @@
                     </StackPanel>
                 </StackPanel>
             </Border>
-            
+
             <!-- Overlay Settings -->
             <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 CornerRadius="8"
                 Padding="16">
                 <StackPanel Spacing="12">
-                    <TextBlock Text="On-Screen Overlay" 
+                    <TextBlock Text="On-Screen Overlay"
                         Style="{StaticResource BodyStrongTextBlockStyle}" />
-                    
+
                     <CheckBox x:Name="OverlayEnabledCheckBox"
                         Content="Show on-screen overlay"
                         IsChecked="True"
                         Checked="OverlayEnabled_Changed"
                         Unchecked="OverlayEnabled_Changed" />
-                    
+
                     <!-- Overlay Transparency -->
                     <StackPanel x:Name="OverlayTransparencyPanel" Spacing="4">
                         <Grid>
@@ -270,21 +270,21 @@
                     </StackPanel>
                 </StackPanel>
             </Border>
-            
+
             <!-- Startup Settings -->
             <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 CornerRadius="8"
                 Padding="16">
                 <StackPanel Spacing="12">
-                    <TextBlock Text="Startup" 
+                    <TextBlock Text="Startup"
                         Style="{StaticResource BodyStrongTextBlockStyle}" />
-                    
+
                     <StackPanel Spacing="8">
                         <CheckBox x:Name="StartWithWindowsCheckBox"
                             Content="Start with Windows"
                             Checked="StartWithWindows_Changed"
                             Unchecked="StartWithWindows_Changed" />
-                        
+
                         <CheckBox x:Name="StartMinimizedCheckBox"
                             Content="Start minimized"
                             Checked="StartMinimized_Changed"

@@ -1,6 +1,5 @@
 using System.Text.Json;
 using MicMuteNet.Models;
-using Windows.Storage;
 
 namespace MicMuteNet.Services;
 
@@ -20,8 +19,18 @@ public sealed class SettingsService : ISettingsService
 
     public SettingsService()
     {
-        var localFolder = ApplicationData.Current.LocalFolder.Path;
-        _settingsPath = Path.Combine(localFolder, SettingsFileName);
+        // Use %LOCALAPPDATA%\MicMuteNet for settings (works for both packaged and unpackaged)
+        var appDataFolder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "MicMuteNet");
+        
+        // Ensure the directory exists
+        if (!Directory.Exists(appDataFolder))
+        {
+            Directory.CreateDirectory(appDataFolder);
+        }
+        
+        _settingsPath = Path.Combine(appDataFolder, SettingsFileName);
         Settings = new AppSettings();
     }
 

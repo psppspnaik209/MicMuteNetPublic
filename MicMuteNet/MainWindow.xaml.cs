@@ -24,7 +24,7 @@ public sealed partial class MainWindow : Window
     private readonly IHotkeyService _hotkeyService;
     private readonly ISettingsService _settingsService;
     private readonly INotificationService _notificationService;
-    private readonly OverlayWindow _overlayWindow;
+    private OverlayWindow? _overlayWindow;
     private TaskbarIcon? _trayIcon;
     private bool _isExiting;
     private bool _isCapturingHotkey;
@@ -36,7 +36,6 @@ public sealed partial class MainWindow : Window
         _hotkeyService = App.Services.GetRequiredService<IHotkeyService>();
         _settingsService = App.Services.GetRequiredService<ISettingsService>();
         _notificationService = App.Services.GetRequiredService<INotificationService>();
-        _overlayWindow = App.Services.GetRequiredService<OverlayWindow>();
         
         InitializeComponent();
 
@@ -69,9 +68,35 @@ public sealed partial class MainWindow : Window
         appWindow.Resize(new SizeInt32(width, height));
     }
 
+    private void SetWindowIcon()
+    {
+        try
+        {
+            var hwnd = WindowNative.GetWindowHandle(this);
+            var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
+            var appWindow = AppWindow.GetFromWindowId(windowId);
+            
+            var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Icons", "microphoneEnabled.ico");
+            if (File.Exists(iconPath))
+            {
+                appWindow.SetIcon(iconPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to set window icon: {ex.Message}");
+        }
+    }
+
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         await _viewModel.InitializeAsync();
+
+        // Create overlay window (must be after app is fully initialized)
+        _overlayWindow = new OverlayWindow();
+
+        // Set window and taskbar icon
+        SetWindowIcon();
 
         // Initialize system tray
         InitializeTrayIcon();
@@ -119,38 +144,66 @@ public sealed partial class MainWindow : Window
 
         try
         {
+            if (!File.Exists(iconPath))
+            {
+                System.Diagnostics.Debug.WriteLine($"Tray icon not found: {iconPath}");
+                StatusText.Text = $"Icon not found: {iconPath}";
+                return;
+            }
+
             _trayIcon = new TaskbarIcon
             {
                 ToolTipText = _viewModel.IsMuted ? "MicMuteNet - Muted" : "MicMuteNet - Unmuted",
                 Icon = new System.Drawing.Icon(iconPath)
             };
 
-            // Context menu
+            // Force the tray icon to be created immediately
+            _trayIcon.ForceCreate();
+
+            // Create context menu with WinUI MenuFlyout
             var contextMenu = new MenuFlyout();
 
             var toggleItem = new MenuFlyoutItem { Text = "Toggle Mute" };
-            toggleItem.Click += (s, e) => _viewModel.ToggleMuteCommand.Execute(null);
+            toggleItem.Click += TrayToggle_Click;
             contextMenu.Items.Add(toggleItem);
 
             contextMenu.Items.Add(new MenuFlyoutSeparator());
 
-            var showItem = new MenuFlyoutItem { Text = "Show" };
-            showItem.Click += (s, e) => ShowWindow();
+            var showItem = new MenuFlyoutItem { Text = "Show Window" };
+            showItem.Click += TrayShow_Click;
             contextMenu.Items.Add(showItem);
 
             var exitItem = new MenuFlyoutItem { Text = "Exit" };
-            exitItem.Click += (s, e) => ExitApplication();
+            exitItem.Click += TrayExit_Click;
             contextMenu.Items.Add(exitItem);
 
             _trayIcon.ContextFlyout = contextMenu;
 
-            // Single left click to show window
+            // Double click to show window
             _trayIcon.LeftClickCommand = new RelayCommand(ShowWindow);
+            
+            System.Diagnostics.Debug.WriteLine("Tray icon created successfully");
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Failed to create tray icon: {ex.Message}");
+            StatusText.Text = $"Tray error: {ex.Message}";
         }
+    }
+
+    private void TrayToggle_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.ToggleMuteCommand.Execute(null);
+    }
+
+    private void TrayShow_Click(object sender, RoutedEventArgs e)
+    {
+        ShowWindow();
+    }
+
+    private void TrayExit_Click(object sender, RoutedEventArgs e)
+    {
+        ExitApplication();
     }
 
     private void UpdateTrayIcon()
@@ -263,7 +316,7 @@ public sealed partial class MainWindow : Window
 
     private void ShowOverlay()
     {
-        if (_settingsService.Settings.OverlayEnabled)
+        if (_settingsService.Settings.OverlayEnabled && _overlayWindow != null)
         {
             _overlayWindow.ShowMuteStatus(_viewModel.IsMuted);
         }
@@ -577,7 +630,7 @@ public sealed partial class MainWindow : Window
         OverlayEnabledCheckBox.IsChecked = settings.OverlayEnabled;
         OverlayOpacitySlider.Value = settings.OverlayOpacity * 100;
         OverlayOpacityText.Text = $"{(int)(settings.OverlayOpacity * 100)}%";
-        _overlayWindow.SetOpacity(settings.OverlayOpacity);
+        _overlayWindow?.SetOpacity(settings.OverlayOpacity);
         
         // Startup settings
         StartWithWindowsCheckBox.IsChecked = settings.RunAtStartup;
@@ -618,7 +671,7 @@ public sealed partial class MainWindow : Window
             OverlayOpacityText.Text = $"{(int)e.NewValue}%";
         
         _settingsService.Settings.OverlayOpacity = opacity;
-        _overlayWindow.SetOpacity(opacity);
+        _overlayWindow?.SetOpacity(opacity);
         _ = _settingsService.SaveAsync();
     }
 }

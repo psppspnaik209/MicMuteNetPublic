@@ -31,7 +31,7 @@ public partial class App : Application
         ConfigureServices();
     }
 
-    private void ConfigureServices()
+    private static void ConfigureServices()
     {
         var services = new ServiceCollection();
 
@@ -44,9 +44,8 @@ public partial class App : Application
         // Register ViewModels
         services.AddTransient<MainViewModel>();
 
-        // Register Views
+        // Register Views (but NOT OverlayWindow - created lazily in MainWindow)
         services.AddTransient<MainWindow>();
-        services.AddSingleton<OverlayWindow>();
 
         Services = services.BuildServiceProvider();
     }
