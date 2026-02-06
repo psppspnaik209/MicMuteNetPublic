@@ -140,18 +140,33 @@
                     <TextBlock Text="Hotkey"
                         Style="{StaticResource BodyStrongTextBlockStyle}" />
 
+                    <!-- Current Hotkey Display -->
                     <Grid ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
+
                         <TextBox x:Name="HotkeyTextBox"
-                            PlaceholderText="Click and press a key..."
+                            PlaceholderText="No hotkey set"
                             IsReadOnly="True"
-                            PreviewKeyDown="HotkeyTextBox_PreviewKeyDown"
-                            GotFocus="HotkeyTextBox_GotFocus"
-                            LostFocus="HotkeyTextBox_LostFocus" />
-                        <Button Grid.Column="1"
+                            IsEnabled="False" />
+
+                        <Button x:Name="RecordButton"
+                            Grid.Column="1"
+                            Click="RecordHotkey_Click"
+                            ToolTipService.ToolTip="Record new hotkey"
+                            Width="90">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon x:Name="RecordButtonIcon"
+                                    FontFamily="{StaticResource SymbolThemeFontFamily}"
+                                    Glyph="&#xE7C8;" FontSize="14" />
+                                <TextBlock x:Name="RecordButtonText" Text="Record" />
+                            </StackPanel>
+                        </Button>
+
+                        <Button Grid.Column="2"
                             Click="ClearHotkey_Click"
                             ToolTipService.ToolTip="Clear hotkey">
                             <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
@@ -159,6 +174,18 @@
                         </Button>
                     </Grid>
 
+                    <!-- Recording Indicator -->
+                    <Border x:Name="RecordingIndicator"
+                        Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
+                        CornerRadius="4"
+                        Padding="12,8"
+                        Visibility="Collapsed">
+                        <TextBlock Text="Press any key combination... (Escape to cancel)"
+                            Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                            TextAlignment="Center" />
+                    </Border>
+
+                    <!-- Options -->
                     <StackPanel Orientation="Horizontal" Spacing="16">
                         <CheckBox x:Name="SuppressHotkeyCheckBox"
                             Content="Suppress key"

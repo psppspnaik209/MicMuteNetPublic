@@ -53,6 +53,7 @@ public sealed partial class MainWindow : Window
         if (Content is FrameworkElement rootElement)
         {
             rootElement.Loaded += MainWindow_Loaded;
+            rootElement.KeyDown += RootElement_KeyDown;
         }
     }
 
@@ -67,13 +68,6 @@ public sealed partial class MainWindow : Window
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         await _viewModel.InitializeAsync();
-
-        // Set window handle for hotkey service
-        var hwnd = WindowNative.GetWindowHandle(this);
-        if (_hotkeyService is HotkeyService hs)
-        {
-            hs.SetWindowHandle(hwnd);
-        }
 
         // Initialize system tray
         InitializeTrayIcon();
@@ -319,33 +313,85 @@ public sealed partial class MainWindow : Window
     }
 
     // Hotkey capture handlers
-    private void HotkeyTextBox_GotFocus(object sender, RoutedEventArgs e)
+    private void RecordHotkey_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isCapturingHotkey)
+        {
+            // Stop recording
+            StopRecording();
+        }
+        else
+        {
+            // Start recording
+            StartRecording();
+        }
+    }
+
+    private void StartRecording()
     {
         _isCapturingHotkey = true;
-        HotkeyTextBox.Text = "Press a key...";
-        StatusText.Text = "Press a key combination to set as hotkey";
+        RecordingIndicator.Visibility = Visibility.Visible;
+        RecordButtonText.Text = "Stop";
+        RecordButtonIcon.Glyph = "\uE71A"; // Stop icon
+        StatusText.Text = "Press any key combination...";
+        
+        // Temporarily unregister current hotkey so we can capture it
+        _hotkeyService.UnregisterHotkey();
+        
+        // Subscribe to keyboard hook for capture
+        if (_hotkeyService is HotkeyService hs)
+        {
+            hs.HotkeyPressed -= OnHotkeyPressed; // Temporarily disable toggle
+        }
+        
+        // Focus the window to capture keys
+        Activate();
     }
 
-    private void HotkeyTextBox_LostFocus(object sender, RoutedEventArgs e)
+    private void StopRecording()
     {
         _isCapturingHotkey = false;
-        if (_pendingHotkey.IsEmpty)
-        {
-            HotkeyTextBox.Text = "";
-        }
+        RecordingIndicator.Visibility = Visibility.Collapsed;
+        RecordButtonText.Text = "Record";
+        RecordButtonIcon.Glyph = "\uE7C8"; // Record icon
         StatusText.Text = "Ready";
+        
+        // Re-subscribe to hotkey
+        if (_hotkeyService is HotkeyService hs)
+        {
+            hs.HotkeyPressed += OnHotkeyPressed;
+        }
+        
+        // Re-register the hotkey if we have one
+        if (!_pendingHotkey.IsEmpty)
+        {
+            _hotkeyService.RegisterHotkey(_pendingHotkey);
+        }
     }
 
-    private void HotkeyTextBox_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
+    private void RootElement_KeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if (!_isCapturingHotkey) return;
+        if (!_isCapturingHotkey)
+        {
+            return;
+        }
 
         e.Handled = true;
 
-        // Ignore modifier-only presses
+        // Escape cancels recording
+        if (e.Key == VirtualKey.Escape)
+        {
+            StopRecording();
+            return;
+        }
+
+        // Ignore modifier-only presses (wait for the actual key)
         if (e.Key == VirtualKey.Control || e.Key == VirtualKey.Menu || 
             e.Key == VirtualKey.Shift || e.Key == VirtualKey.LeftWindows ||
-            e.Key == VirtualKey.RightWindows)
+            e.Key == VirtualKey.RightWindows ||
+            e.Key == VirtualKey.LeftControl || e.Key == VirtualKey.RightControl ||
+            e.Key == VirtualKey.LeftShift || e.Key == VirtualKey.RightShift ||
+            e.Key == VirtualKey.LeftMenu || e.Key == VirtualKey.RightMenu)
         {
             return;
         }
@@ -366,10 +412,12 @@ public sealed partial class MainWindow : Window
         _pendingHotkey = config;
         HotkeyTextBox.Text = config.ToString();
 
-        // Register the hotkey
+        // Stop recording and register the hotkey
+        StopRecording();
+        
         if (_hotkeyService.RegisterHotkey(config))
         {
-            StatusText.Text = $"Hotkey registered: {config}";
+            StatusText.Text = $"Hotkey set: {config}";
             
             // Save to settings
             _settingsService.Settings.Hotkey = config;
@@ -377,15 +425,18 @@ public sealed partial class MainWindow : Window
         }
         else
         {
-            StatusText.Text = "Failed to register hotkey (may be in use)";
+            StatusText.Text = "Failed to register hotkey";
         }
-
-        // Remove focus
-        _isCapturingHotkey = false;
     }
 
     private void ClearHotkey_Click(object sender, RoutedEventArgs e)
     {
+        // Stop recording if active
+        if (_isCapturingHotkey)
+        {
+            StopRecording();
+        }
+        
         _hotkeyService.UnregisterHotkey();
         _pendingHotkey = new HotkeyConfiguration();
         HotkeyTextBox.Text = "";

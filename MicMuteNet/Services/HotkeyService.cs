@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using MicMuteNet.Models;
 using Windows.System;
@@ -5,108 +6,149 @@ using Windows.System;
 namespace MicMuteNet.Services;
 
 /// <summary>
-/// Global hotkey service using Win32 RegisterHotKey API.
+/// Global hotkey service using low-level keyboard hook.
+/// Uses WH_KEYBOARD_LL which is safe and won't trigger anti-cheats.
 /// </summary>
-public sealed partial class HotkeyService : IHotkeyService
+public sealed class HotkeyService : IHotkeyService
 {
-    private const int WM_HOTKEY = 0x0312;
-    private const int HOTKEY_ID = 9000;
+    private const int WH_KEYBOARD_LL = 13;
+    private const int WM_KEYDOWN = 0x0100;
+    private const int WM_KEYUP = 0x0101;
+    private const int WM_SYSKEYDOWN = 0x0104;
+    private const int WM_SYSKEYUP = 0x0105;
 
-    private IntPtr _hwnd;
-    private bool _isRegistered;
+    private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern IntPtr GetModuleHandle(string lpModuleName);
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct KBDLLHOOKSTRUCT
+    {
+        public uint vkCode;
+        public uint scanCode;
+        public uint flags;
+        public uint time;
+        public IntPtr dwExtraInfo;
+    }
+
+    // Virtual key codes for modifiers
+    private const int VK_CONTROL = 0x11;
+    private const int VK_MENU = 0x12;    // Alt key
+    private const int VK_SHIFT = 0x10;
+    private const int VK_LWIN = 0x5B;
+    private const int VK_RWIN = 0x5C;
+
+    private IntPtr _hookId = IntPtr.Zero;
+    private LowLevelKeyboardProc? _hookProc;
     private HotkeyConfiguration? _currentHotkey;
+    private bool _isKeyDown;
     private readonly object _lock = new();
-
-    // Win32 P/Invoke
-    [LibraryImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
-
-    [LibraryImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool UnregisterHotKey(IntPtr hWnd, int id);
-
-    [LibraryImport("user32.dll", SetLastError = true)]
-    private static partial IntPtr CreateWindowExW(
-        uint dwExStyle,
-        [MarshalAs(UnmanagedType.LPWStr)] string lpClassName,
-        [MarshalAs(UnmanagedType.LPWStr)] string lpWindowName,
-        uint dwStyle,
-        int x, int y, int nWidth, int nHeight,
-        IntPtr hWndParent,
-        IntPtr hMenu,
-        IntPtr hInstance,
-        IntPtr lpParam);
-
-    [LibraryImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool DestroyWindow(IntPtr hWnd);
-
-    // Modifier key flags
-    private const uint MOD_ALT = 0x0001;
-    private const uint MOD_CONTROL = 0x0002;
-    private const uint MOD_SHIFT = 0x0004;
-    private const uint MOD_WIN = 0x0008;
-    private const uint MOD_NOREPEAT = 0x4000;
 
     public event EventHandler? HotkeyPressed;
 
     public HotkeyConfiguration? CurrentHotkey => _currentHotkey;
-    public bool IsRegistered => _isRegistered;
+    public bool IsRegistered => _hookId != IntPtr.Zero && _currentHotkey != null && !_currentHotkey.IsEmpty;
 
     public HotkeyService()
     {
-        // Create a message-only window for receiving hotkey messages
-        _hwnd = IntPtr.Zero;
+        // Install the low-level keyboard hook
+        _hookProc = HookCallback;
+        _hookId = SetHook(_hookProc);
+        Debug.WriteLine($"Keyboard hook installed: {_hookId != IntPtr.Zero}");
+    }
+
+    private IntPtr SetHook(LowLevelKeyboardProc proc)
+    {
+        using var process = Process.GetCurrentProcess();
+        using var module = process.MainModule;
+        if (module?.ModuleName == null) return IntPtr.Zero;
+        
+        return SetWindowsHookEx(WH_KEYBOARD_LL, proc, GetModuleHandle(module.ModuleName), 0);
+    }
+
+    private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+    {
+        if (nCode >= 0 && _currentHotkey != null && !_currentHotkey.IsEmpty)
+        {
+            var hookStruct = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
+            var vkCode = (int)hookStruct.vkCode;
+            var isKeyDown = wParam == (IntPtr)WM_KEYDOWN || wParam == (IntPtr)WM_SYSKEYDOWN;
+            var isKeyUp = wParam == (IntPtr)WM_KEYUP || wParam == (IntPtr)WM_SYSKEYUP;
+
+            // Check if this is our registered hotkey
+            if (vkCode == (int)_currentHotkey.Key)
+            {
+                bool modifiersMatch = true;
+
+                if (!_currentHotkey.IgnoreModifiers)
+                {
+                    // Check modifier keys
+                    bool ctrlDown = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+                    bool altDown = (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
+                    bool shiftDown = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
+                    bool winDown = (GetAsyncKeyState(VK_LWIN) & 0x8000) != 0 || (GetAsyncKeyState(VK_RWIN) & 0x8000) != 0;
+
+                    modifiersMatch = (ctrlDown == _currentHotkey.Control) &&
+                                     (altDown == _currentHotkey.Alt) &&
+                                     (shiftDown == _currentHotkey.Shift) &&
+                                     (winDown == _currentHotkey.Win);
+                }
+
+                if (modifiersMatch)
+                {
+                    if (isKeyDown && !_isKeyDown)
+                    {
+                        _isKeyDown = true;
+                        Debug.WriteLine($"Hotkey pressed: {_currentHotkey}");
+                        
+                        // Fire the event
+                        HotkeyPressed?.Invoke(this, EventArgs.Empty);
+                    }
+                    else if (isKeyUp)
+                    {
+                        _isKeyDown = false;
+                    }
+
+                    // Suppress the key if configured
+                    if (_currentHotkey.Suppress)
+                    {
+                        return (IntPtr)1; // Suppress the key
+                    }
+                }
+            }
+        }
+
+        return CallNextHookEx(_hookId, nCode, wParam, lParam);
     }
 
     public bool RegisterHotkey(HotkeyConfiguration config)
     {
         lock (_lock)
         {
-            if (config.IsEmpty) return false;
-
-            // Unregister existing hotkey first
-            if (_isRegistered)
+            if (config.IsEmpty)
             {
-                UnregisterHotkey();
-            }
-
-            // Get window handle from current dispatcher
-            var hwnd = GetMessageWindowHandle();
-            if (hwnd == IntPtr.Zero)
-            {
-                System.Diagnostics.Debug.WriteLine("Failed to get message window handle");
+                _currentHotkey = null;
                 return false;
             }
 
-            _hwnd = hwnd;
-
-            // Build modifiers
-            uint modifiers = MOD_NOREPEAT;
-            if (config.Alt) modifiers |= MOD_ALT;
-            if (config.Control) modifiers |= MOD_CONTROL;
-            if (config.Shift) modifiers |= MOD_SHIFT;
-            if (config.Win) modifiers |= MOD_WIN;
-
-            // Get virtual key code
-            uint vk = (uint)config.Key;
-
-            // Register the hotkey
-            bool result = RegisterHotKey(_hwnd, HOTKEY_ID, modifiers, vk);
-            if (result)
-            {
-                _isRegistered = true;
-                _currentHotkey = config;
-                System.Diagnostics.Debug.WriteLine($"Hotkey registered: {config}");
-            }
-            else
-            {
-                var error = Marshal.GetLastWin32Error();
-                System.Diagnostics.Debug.WriteLine($"Failed to register hotkey: {error}");
-            }
-
-            return result;
+            _currentHotkey = config;
+            _isKeyDown = false;
+            Debug.WriteLine($"Hotkey registered: {config}");
+            return true;
         }
     }
 
@@ -114,35 +156,20 @@ public sealed partial class HotkeyService : IHotkeyService
     {
         lock (_lock)
         {
-            if (_isRegistered && _hwnd != IntPtr.Zero)
-            {
-                UnregisterHotKey(_hwnd, HOTKEY_ID);
-                _isRegistered = false;
-                _currentHotkey = null;
-                System.Diagnostics.Debug.WriteLine("Hotkey unregistered");
-            }
+            _currentHotkey = null;
+            _isKeyDown = false;
+            Debug.WriteLine("Hotkey unregistered");
         }
-    }
-
-    private IntPtr GetMessageWindowHandle()
-    {
-        // For WinUI 3, we need to use the main window's handle
-        // This will be set from MainWindow
-        return _hwnd;
-    }
-
-    public void SetWindowHandle(IntPtr hwnd)
-    {
-        _hwnd = hwnd;
-    }
-
-    public void ProcessHotkeyMessage()
-    {
-        HotkeyPressed?.Invoke(this, EventArgs.Empty);
     }
 
     public void Dispose()
     {
-        UnregisterHotkey();
+        if (_hookId != IntPtr.Zero)
+        {
+            UnhookWindowsHookEx(_hookId);
+            _hookId = IntPtr.Zero;
+            Debug.WriteLine("Keyboard hook removed");
+        }
+        _hookProc = null;
     }
 }
