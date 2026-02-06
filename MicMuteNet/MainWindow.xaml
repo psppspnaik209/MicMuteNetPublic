@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="MicMuteNet.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:MicMuteNet"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="MicMuteNet">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24">
+        <StackPanel Spacing="16" MaxWidth="500">
+
+            <!-- Header -->
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
+                    Glyph="&#xE720;"
+                    FontSize="32"
+                    Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="MicMuteNet"
+                        Style="{StaticResource TitleTextBlockStyle}" />
+                    <TextBlock x:Name="MuteStatusText"
+                        Text="Unmuted"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Microphone Selection -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="Microphone"
+                    Style="{StaticResource BodyStrongTextBlockStyle}" />
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ComboBox x:Name="DeviceComboBox"
+                        HorizontalAlignment="Stretch"
+                        DisplayMemberPath="Name"
+                        SelectionChanged="DeviceComboBox_SelectionChanged" />
+                    <Button Grid.Column="1"
+                        Click="RefreshDevices_Click"
+                        ToolTipService.ToolTip="Refresh devices">
+                        <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
+                            Glyph="&#xE72C;" FontSize="14" />
+                    </Button>
+                </Grid>
+            </StackPanel>
+
+            <!-- Mute Control -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="8"
+                Padding="16">
+                <Grid ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Mute"
+                            Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <TextBlock x:Name="MuteDescriptionText"
+                            Text="Click to toggle microphone mute"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+
+                    <ToggleButton x:Name="MuteToggleButton"
+                        Grid.Column="1"
+                        Width="64" Height="64"
+                        CornerRadius="32"
+                        Click="MuteToggle_Click">
+                        <FontIcon x:Name="MuteIcon"
+                            FontFamily="{StaticResource SymbolThemeFontFamily}"
+                            Glyph="&#xE720;"
+                            FontSize="24" />
+                    </ToggleButton>
+                </Grid>
+            </Border>
+
+            <!-- Volume Control -->
+            <Border x:Name="VolumeControlPanel"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="8"
+                Padding="16">
+                <StackPanel Spacing="8">
+                    <CheckBox x:Name="VolumeControlCheckBox"
+                        Content="Volume control"
+                        Checked="VolumeControl_Changed"
+                        Unchecked="VolumeControl_Changed" />
+
+                    <Grid ColumnSpacing="12"
+                        x:Name="VolumeSliderPanel" Visibility="Collapsed">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="VolumeSlider"
+                            Minimum="0" Maximum="100" Value="100"
+                            ValueChanged="VolumeSlider_ValueChanged" />
+                        <TextBlock x:Name="VolumeText"
+                            Grid.Column="1"
+                            Text="100%"
+                            VerticalAlignment="Center"
+                            Width="48"
+                            TextAlignment="Right" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Mute Mode -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="8"
+                Padding="16">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Mute mode"
+                        Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    <RadioButtons x:Name="MuteModeRadios"
+                        SelectionChanged="MuteMode_SelectionChanged">
+                        <RadioButton Content="Toggle" Tag="Toggle" />
+                        <RadioButton Content="Push-to-Talk" Tag="PushToTalk" />
+                        <RadioButton Content="Push-to-Mute" Tag="PushToMute" />
+                    </RadioButtons>
+                </StackPanel>
+            </Border>
+
+            <!-- Hotkey Configuration -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="8"
+                Padding="16">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Hotkey"
+                        Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="HotkeyTextBox"
+                            PlaceholderText="Click and press a key..."
+                            IsReadOnly="True"
+                            PreviewKeyDown="HotkeyTextBox_PreviewKeyDown"
+                            GotFocus="HotkeyTextBox_GotFocus"
+                            LostFocus="HotkeyTextBox_LostFocus" />
+                        <Button Grid.Column="1"
+                            Click="ClearHotkey_Click"
+                            ToolTipService.ToolTip="Clear hotkey">
+                            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
+                                Glyph="&#xE711;" FontSize="14" />
+                        </Button>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <CheckBox x:Name="SuppressHotkeyCheckBox"
+                            Content="Suppress key"
+                            IsChecked="True"
+                            Checked="HotkeyOptions_Changed"
+                            Unchecked="HotkeyOptions_Changed" />
+                        <CheckBox x:Name="IgnoreModifiersCheckBox"
+                            Content="Ignore modifiers"
+                            Checked="HotkeyOptions_Changed"
+                            Unchecked="HotkeyOptions_Changed" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Status Bar -->
+            <TextBlock x:Name="StatusText"
+                Text="Ready"
+                Style="{StaticResource CaptionTextBlockStyle}"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Margin="0,8,0,0" />
+
+        </StackPanel>
+    </ScrollViewer>
+</Window>
