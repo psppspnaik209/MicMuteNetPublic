@@ -15,6 +15,28 @@ A modern, lightweight Windows application to mute your microphone globally using
 - **System Tray**: Runs silently in the background with tray icon support.
 - **Startup Options**: Auto-start with Windows, start minimized, and mute on startup.
 
+## Downloads
+
+[**Download Latest Release**](https://github.com/psppspnaik209/MicMuteNet/releases/latest)
+
+### 1. Choose your version
+
+Determine your system type (Settings > System > About > System type).
+
+| System Type        | Installer (Recommended)      | Portable (.zip)                 |
+| :----------------- | :--------------------------- | :------------------------------ |
+| **x64** (Standard) | `MicMuteNet-Setup-x64.exe`   | `MicMuteNet-Portable-x64.zip`   |
+| **x86** (32-bit)   | `MicMuteNet-Setup-x86.exe`   | `MicMuteNet-Portable-x86.zip`   |
+| **ARM64**          | `MicMuteNet-Setup-ARM64.exe` | `MicMuteNet-Portable-ARM64.zip` |
+
+### 2. Install Prerequisites
+
+You **must** install the **.NET 10 Desktop Runtime** for your system architecture if you haven't already.
+
+- **x64**: [Download Runtime (x64)](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-10.0.2-windows-x64-installer)
+- **x86**: [Download Runtime (x86)](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-10.0.2-windows-x86-installer)
+- **ARM64**: [Download Runtime (ARM64)](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-10.0.2-windows-arm64-installer)
+
 ## Requirements
 
 - Windows 10 (1809+) or Windows 11
