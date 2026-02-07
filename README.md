@@ -17,7 +17,7 @@ A modern, lightweight Windows application to mute your microphone globally using
 
 ## Downloads
 
-[**Download Latest Release**](https://github.com/psppspnaik209/MicMuteNet/releases/latest)
+[**Download Latest Release**](https://github.com/psppspnaik209/MicMuteNetPublic/releases/latest)
 
 ### 1. Choose your version
 

@@ -421,7 +421,7 @@ public sealed partial class MainWindow : Window
             {
                 Process.Start(new ProcessStartInfo
                 {
-                    FileName = "https://github.com/psppspnaik209/MicMuteNet",
+                    FileName = "https://github.com/psppspnaik209/MicMuteNetPublic",
                     UseShellExecute = true
                 });
             }
