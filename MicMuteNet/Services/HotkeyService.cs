@@ -59,6 +59,7 @@ public sealed class HotkeyService : IHotkeyService
     private readonly object _lock = new();
 
     public event EventHandler? HotkeyPressed;
+    public event EventHandler? HotkeyReleased; // New event for key up
 
     public HotkeyConfiguration? CurrentHotkey => _currentHotkey;
     public bool IsRegistered => _hookId != IntPtr.Zero && _currentHotkey != null && !_currentHotkey.IsEmpty;
@@ -126,12 +127,16 @@ public sealed class HotkeyService : IHotkeyService
                         _isKeyDown = true;
                         Debug.WriteLine($"Hotkey pressed: {_currentHotkey}");
                         
-                        // Fire the event
+                        // Fire the pressed event
                         HotkeyPressed?.Invoke(this, EventArgs.Empty);
                     }
-                    else if (isKeyUp)
+                    else if (isKeyUp && _isKeyDown)
                     {
                         _isKeyDown = false;
+                        Debug.WriteLine($"Hotkey released: {_currentHotkey}");
+                        
+                        // Fire the released event
+                        HotkeyReleased?.Invoke(this, EventArgs.Empty);
                     }
 
                     // Suppress the key if configured

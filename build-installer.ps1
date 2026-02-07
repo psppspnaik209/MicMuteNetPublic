@@ -24,7 +24,7 @@ if (!(Test-Path $OutputBase)) {
 }
 
 # Check for x64 Debug build
-$x64DebugPath = Join-Path $ProjectDir "MicMuteNet\bin\x64\Debug\net10.0-windows10.0.19041.0\win-x64"
+$x64DebugPath = Join-Path $ProjectDir "MicMuteNet\bin\x64\Debug\net10.0-windows10.0.19041.0\"
 $hasx64Debug = Test-Path "$x64DebugPath\MicMuteNet.exe"
 
 # Check for x64 Release build
@@ -32,11 +32,11 @@ $x64ReleasePath = Join-Path $ProjectDir "MicMuteNet\bin\x64\Release\net10.0-wind
 $hasx64Release = Test-Path "$x64ReleasePath\MicMuteNet.exe"
 
 # Check for ARM64 Debug build
-$arm64DebugPath = Join-Path $ProjectDir "MicMuteNet\bin\ARM64\Debug\net10.0-windows10.0.19041.0\win-arm64"
+$arm64DebugPath = Join-Path $ProjectDir "MicMuteNet\bin\ARM64\Debug\net10.0-windows10.0.19041.0\"
 $hasArm64Debug = Test-Path "$arm64DebugPath\MicMuteNet.exe"
 
 # Check for ARM64 Release build  
-$arm64ReleasePath = Join-Path $ProjectDir "MicMuteNet\bin\ARM64\Release\net10.0-windows10.0.19041.0\win-arm64"
+$arm64ReleasePath = Join-Path $ProjectDir "MicMuteNet\bin\ARM64\Release\net10.0-windows10.0.19041.0\"
 $hasArm64Release = Test-Path "$arm64ReleasePath\MicMuteNet.exe"
 
 # Use Release if available, otherwise Debug
@@ -101,10 +101,13 @@ Source: "$x64Path\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{userdesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Tasks]
-Name: "desktopicon"; Description: "Create desktop shortcut"
+Name: "desktopicon"; Description: "Create desktop shortcut"; Flags: unchecked
+
+[UninstallDelete]
+Type: filesandordirs; Name: "{app}"
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
@@ -152,10 +155,13 @@ Source: "$arm64Path\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{userdesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Tasks]
-Name: "desktopicon"; Description: "Create desktop shortcut"
+Name: "desktopicon"; Description: "Create desktop shortcut"; Flags: unchecked
+
+[UninstallDelete]
+Type: filesandordirs; Name: "{app}"
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent

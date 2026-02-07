@@ -13,6 +13,11 @@ public interface IHotkeyService : IDisposable
     event EventHandler? HotkeyPressed;
 
     /// <summary>
+    /// Event raised when the registered hotkey is released.
+    /// </summary>
+    event EventHandler? HotkeyReleased;
+
+    /// <summary>
     /// Gets the current hotkey configuration.
     /// </summary>
     HotkeyConfiguration? CurrentHotkey { get; }

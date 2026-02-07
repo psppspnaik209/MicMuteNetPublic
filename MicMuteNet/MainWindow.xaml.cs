@@ -58,6 +58,7 @@ public sealed partial class MainWindow : Window
 
             // Subscribe to hotkey events
             _hotkeyService.HotkeyPressed += OnHotkeyPressed;
+            _hotkeyService.HotkeyReleased += OnHotkeyReleased;
 
             // Handle window close to minimize to tray
             AppWindow.Closing += AppWindow_Closing;
@@ -533,7 +534,46 @@ public sealed partial class MainWindow : Window
     {
         DispatcherQueue.TryEnqueue(() =>
         {
-            _viewModel.ToggleMuteCommand.Execute(null);
+            switch (_viewModel.MuteMode)
+            {
+                case MuteMode.Toggle:
+                    // Toggle mode: press to toggle mute state
+                    _viewModel.ToggleMuteCommand.Execute(null);
+                    break;
+                    
+                case MuteMode.PushToTalk:
+                    // Push to talk: press to unmute
+                    _viewModel.SetMutedCommand.Execute(false);
+                    break;
+                    
+                case MuteMode.PushToMute:
+                    // Push to mute: press to mute
+                    _viewModel.SetMutedCommand.Execute(true);
+                    break;
+            }
+        });
+    }
+
+    private void OnHotkeyReleased(object? sender, EventArgs e)
+    {
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            switch (_viewModel.MuteMode)
+            {
+                case MuteMode.Toggle:
+                    // Toggle mode: do nothing on release
+                    break;
+                    
+                case MuteMode.PushToTalk:
+                    // Push to talk: release to mute (return to muted state)
+                    _viewModel.SetMutedCommand.Execute(true);
+                    break;
+                    
+                case MuteMode.PushToMute:
+                    // Push to mute: release to unmute (return to unmuted state)
+                    _viewModel.SetMutedCommand.Execute(false);
+                    break;
+            }
         });
     }
 
