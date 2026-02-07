@@ -3,6 +3,7 @@ using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
+using MicMuteNet.Helpers;
 using Windows.Graphics;
 using WinRT.Interop;
 
@@ -77,8 +78,8 @@ public sealed partial class OverlayWindow : Window
             var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
             var appWindow = AppWindow.GetFromWindowId(windowId);
             
-            var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Icons", "microphoneEnabled.ico");
-            if (File.Exists(iconPath))
+            var iconPath = IconHelper.MicrophoneEnabledIconPath;
+            if (IconHelper.IconExists(iconPath))
             {
                 appWindow.SetIcon(iconPath);
             }

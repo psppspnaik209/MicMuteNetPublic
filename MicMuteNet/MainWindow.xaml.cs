@@ -3,6 +3,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using MicMuteNet.Helpers;
 using MicMuteNet.Models;
 using MicMuteNet.Services;
 using MicMuteNet.ViewModels;
@@ -95,8 +96,8 @@ public sealed partial class MainWindow : Window
             var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
             var appWindow = AppWindow.GetFromWindowId(windowId);
             
-            var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Icons", "microphoneEnabled.ico");
-            if (File.Exists(iconPath))
+            var iconPath = IconHelper.MicrophoneEnabledIconPath;
+            if (IconHelper.IconExists(iconPath))
             {
                 appWindow.SetIcon(iconPath);
             }
@@ -206,13 +207,11 @@ public sealed partial class MainWindow : Window
 
     private void InitializeTrayIcon()
     {
-        var iconPath = _viewModel.IsMuted
-            ? Path.Combine(AppContext.BaseDirectory, "Assets", "Icons", "microphoneDisabled.ico")
-            : Path.Combine(AppContext.BaseDirectory, "Assets", "Icons", "microphoneEnabled.ico");
+        var iconPath = IconHelper.GetIconPath(_viewModel.IsMuted);
 
         try
         {
-            if (!File.Exists(iconPath))
+            if (!IconHelper.IconExists(iconPath))
             {
                 System.Diagnostics.Debug.WriteLine($"Tray icon not found: {iconPath}");
                 StatusText.Text = $"Icon not found: {iconPath}";
@@ -505,9 +504,7 @@ public sealed partial class MainWindow : Window
     {
         if (_trayIcon == null) return;
 
-        var iconPath = _viewModel.IsMuted
-            ? Path.Combine(AppContext.BaseDirectory, "Assets", "Icons", "microphoneDisabled.ico")
-            : Path.Combine(AppContext.BaseDirectory, "Assets", "Icons", "microphoneEnabled.ico");
+        var iconPath = IconHelper.GetIconPath(_viewModel.IsMuted);
 
         try
         {

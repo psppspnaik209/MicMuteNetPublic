@@ -105,6 +105,7 @@ public sealed class SimpleSettingsService : ISettingsService
                 $"MuteMode={Settings.MuteMode}",
                 $"VolumeControlEnabled={Settings.VolumeControlEnabled}",
                 $"OverlayEnabled={Settings.OverlayEnabled}",
+                $"OverlayDuration={Settings.OverlayDuration}",
                 $"OverlayOpacity={Settings.OverlayOpacity}",
                 $"NotificationEnabled={Settings.NotificationEnabled}",
                 $"NotificationVolume={Settings.NotificationVolume}",
