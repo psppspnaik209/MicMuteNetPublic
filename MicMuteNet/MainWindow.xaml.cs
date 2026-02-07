@@ -30,6 +30,7 @@ public sealed partial class MainWindow : Window
     private bool _isExiting;
     private bool _isCapturingHotkey;
     private HotkeyConfiguration _pendingHotkey = new();
+    private bool _isLoadingSettings = true; // Block saves during initialization
 
     public MainWindow(MainViewModel viewModel)
     {
@@ -148,7 +149,19 @@ public sealed partial class MainWindow : Window
             // Load settings to UI
             LoadSettingsToUI();
 
+            // Enable saves now that initialization is complete
+            _isLoadingSettings = false;
+
             UpdateMuteUI();
+
+            // Apply default mute on startup (after all config is loaded)
+            if (_settingsService.Settings.DefaultMuteOnStartup && _viewModel.SelectedDevice != null)
+            {
+                StartupLogger.Log("Applying default mute on startup...");
+                _viewModel.SetMutedCommand.Execute(true);
+                UpdateMuteUI();
+                StartupLogger.Log("Default mute applied.");
+            }
 
             if (_settingsService.Settings.StartMinimized)
             {
@@ -318,6 +331,142 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OpenAbout_Click(object sender, RoutedEventArgs e)
+    {
+        var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+        var versionText = version != null ? $"Version {version.Major}.{version.Minor}.{version.Build}" : "Version 1.0.0";
+
+        var dialog = new ContentDialog
+        {
+            Title = "About MicMuteNet",
+            CloseButtonText = "Close",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = Content.XamlRoot,
+            Content = CreateAboutContent(versionText)
+        };
+
+        await dialog.ShowAsync();
+    }
+
+    private StackPanel CreateAboutContent(string versionText)
+    {
+        var content = new StackPanel { Spacing = 16, MaxWidth = 450 };
+
+        // App name and version
+        var titleStack = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, Spacing = 8 };
+        titleStack.Children.Add(new TextBlock
+        {
+            Text = "MicMuteNet",
+            Style = (Style)Application.Current.Resources["TitleTextBlockStyle"],
+            HorizontalAlignment = HorizontalAlignment.Center
+        });
+        titleStack.Children.Add(new TextBlock
+        {
+            Text = versionText,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"]
+        });
+        content.Children.Add(titleStack);
+
+        // Description
+        content.Children.Add(new TextBlock
+        {
+            Text = "A lightweight microphone mute utility with global hotkey support, system tray integration, and on-screen overlay notifications.",
+            TextWrapping = TextWrapping.Wrap,
+            HorizontalTextAlignment = TextAlignment.Center,
+            Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"]
+        });
+
+        // Made with love
+        var loveText = new TextBlock
+        {
+            Text = "Made with Love by TNBB",
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"]
+        };
+        loveText.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
+        content.Children.Add(loveText);
+
+        // GitHub link
+        var githubButton = new HyperlinkButton
+        {
+            Content = "View on GitHub",
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
+        githubButton.Click += (s, e) =>
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "https://github.com/psppspnaik209/MicMuteNet",
+                    UseShellExecute = true
+                });
+            }
+            catch { }
+        };
+        content.Children.Add(githubButton);
+
+        // License link
+        var licenseButton = new HyperlinkButton
+        {
+            Content = "MIT License",
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
+        licenseButton.Click += (s, e) =>
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "https://opensource.org/licenses/MIT",
+                    UseShellExecute = true
+                });
+            }
+            catch { }
+        };
+        content.Children.Add(licenseButton);
+
+        // Donate button
+        var donateButton = new Button
+        {
+            Content = "Buy Me a Coffee",
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Style = (Style)Application.Current.Resources["AccentButtonStyle"]
+        };
+        donateButton.Click += (s, e) =>
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "https://buymeacoffee.com/psppspnaik209",
+                    UseShellExecute = true
+                });
+            }
+            catch { }
+        };
+        content.Children.Add(donateButton);
+
+        // License text
+        var licenseBorder = new Border
+        {
+            Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["CardBackgroundFillColorSecondaryBrush"],
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(12),
+            Child = new TextBlock
+            {
+                Text = "MIT License\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files, to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software.",
+                TextWrapping = TextWrapping.Wrap,
+                FontSize = 12,
+                Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"]
+            }
+        };
+        content.Children.Add(licenseBorder);
+
+        return content;
+    }
+
     private void InvokeOnUI(Action action)
     {
         if (DispatcherQueue.HasThreadAccess)
@@ -359,8 +508,14 @@ public sealed partial class MainWindow : Window
     private void ExitApplication()
     {
         _isExiting = true;
-        _hotkeyService.Dispose();
+        
+        // Dispose resources
+        _viewModel?.Dispose();
+        _hotkeyService?.Dispose();
         _trayIcon?.Dispose();
+        _overlayWindow?.Close();
+        
+        // Close the window
         Close();
     }
 
@@ -665,18 +820,21 @@ public sealed partial class MainWindow : Window
     // Settings event handlers
     private void NotificationEnabled_Changed(object sender, RoutedEventArgs e)
     {
+        if (_isLoadingSettings) return;
         _settingsService.Settings.NotificationEnabled = NotificationEnabledCheckBox.IsChecked == true;
         _ = _settingsService.SaveAsync();
     }
 
     private void OverlayEnabled_Changed(object sender, RoutedEventArgs e)
     {
+        if (_isLoadingSettings) return;
         _settingsService.Settings.OverlayEnabled = OverlayEnabledCheckBox.IsChecked == true;
         _ = _settingsService.SaveAsync();
     }
 
     private void StartWithWindows_Changed(object sender, RoutedEventArgs e)
     {
+        if (_isLoadingSettings) return;
         _settingsService.Settings.RunAtStartup = StartWithWindowsCheckBox.IsChecked == true;
         SetStartWithWindows(_settingsService.Settings.RunAtStartup);
         _ = _settingsService.SaveAsync();
@@ -684,7 +842,15 @@ public sealed partial class MainWindow : Window
 
     private void StartMinimized_Changed(object sender, RoutedEventArgs e)
     {
+        if (_isLoadingSettings) return;
         _settingsService.Settings.StartMinimized = StartMinimizedCheckBox.IsChecked == true;
+        _ = _settingsService.SaveAsync();
+    }
+
+    private void DefaultMuteOnStartup_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_isLoadingSettings) return;
+        _settingsService.Settings.DefaultMuteOnStartup = DefaultMuteOnStartupCheckBox.IsChecked == true;
         _ = _settingsService.SaveAsync();
     }
 
@@ -752,10 +918,12 @@ public sealed partial class MainWindow : Window
         // Startup settings
         StartWithWindowsCheckBox.IsChecked = settings.RunAtStartup;
         StartMinimizedCheckBox.IsChecked = settings.StartMinimized;
+        DefaultMuteOnStartupCheckBox.IsChecked = settings.DefaultMuteOnStartup;
     }
 
     private void SoundVolume_Changed(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
     {
+        if (_isLoadingSettings) return;
         var volume = (float)(e.NewValue / 100.0);
         if (SoundVolumeText != null)
             SoundVolumeText.Text = $"{(int)e.NewValue}%";
@@ -770,6 +938,7 @@ public sealed partial class MainWindow : Window
 
     private void OutputDevice_Changed(object sender, SelectionChangedEventArgs e)
     {
+        if (_isLoadingSettings) return;
         if (OutputDeviceComboBox.SelectedItem is OutputDevice device)
         {
             _settingsService.Settings.OutputDeviceNumber = device.DeviceNumber;
@@ -783,6 +952,7 @@ public sealed partial class MainWindow : Window
 
     private void OverlayOpacity_Changed(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
     {
+        if (_isLoadingSettings) return;
         var opacity = e.NewValue / 100.0;
         if (OverlayOpacityText != null)
             OverlayOpacityText.Text = $"{(int)e.NewValue}%";

@@ -77,12 +77,12 @@ public partial class App : Application
             StartupLogger.Log("Creating ServiceCollection...");
             var services = new ServiceCollection();
 
-            // Register services
-            StartupLogger.Log("Registering services...");
-            services.AddSingleton<IAudioDeviceService, AudioDeviceService>();
-            services.AddSingleton<ISettingsService, SettingsService>();
-            services.AddSingleton<IHotkeyService, HotkeyService>();
-            services.AddSingleton<INotificationService, NotificationService>();
+        // Register services
+        StartupLogger.Log("Registering services...");
+        services.AddSingleton<IAudioDeviceService, AudioDeviceService>();
+        services.AddSingleton<ISettingsService, SimpleSettingsService>(); // Use simple settings service
+        services.AddSingleton<IHotkeyService, HotkeyService>();
+        services.AddSingleton<INotificationService, NotificationService>();
 
             // Register ViewModels
             StartupLogger.Log("Registering ViewModels...");

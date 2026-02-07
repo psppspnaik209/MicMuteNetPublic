@@ -21,6 +21,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" Spacing="16">
                     <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
@@ -37,6 +38,14 @@
                     </StackPanel>
                 </StackPanel>
                 <Button Grid.Column="1"
+                    Click="OpenAbout_Click"
+                    ToolTipService.ToolTip="About"
+                    VerticalAlignment="Center">
+                    <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
+                        Glyph="&#xE946;"
+                        FontSize="16" />
+                </Button>
+                <Button Grid.Column="2"
                     Click="OpenConfig_Click"
                     ToolTipService.ToolTip="Open settings.json"
                     VerticalAlignment="Center">
@@ -264,9 +273,7 @@
 
                     <CheckBox x:Name="OverlayEnabledCheckBox"
                         Content="Show on-screen overlay"
-                        IsChecked="True"
-                        Checked="OverlayEnabled_Changed"
-                        Unchecked="OverlayEnabled_Changed" />
+                        Click="OverlayEnabled_Changed" />
 
                     <!-- Overlay Transparency -->
                     <StackPanel x:Name="OverlayTransparencyPanel" Spacing="4">
@@ -303,6 +310,11 @@
                             Content="Start minimized"
                             Checked="StartMinimized_Changed"
                             Unchecked="StartMinimized_Changed" />
+
+                        <CheckBox x:Name="DefaultMuteOnStartupCheckBox"
+                            Content="Always mute microphone on startup"
+                            Checked="DefaultMuteOnStartup_Changed"
+                            Unchecked="DefaultMuteOnStartup_Changed" />
                     </StackPanel>
                 </StackPanel>
             </Border>

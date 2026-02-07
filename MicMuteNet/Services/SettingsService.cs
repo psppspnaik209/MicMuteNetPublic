@@ -53,22 +53,32 @@ public sealed class SettingsService : ISettingsService
     {
         try
         {
+            StartupLogger.Log($"Loading settings from: {_settingsPath}");
+            
             if (File.Exists(_settingsPath))
             {
+                StartupLogger.Log("Settings file exists, loading...");
                 var json = await File.ReadAllTextAsync(_settingsPath);
                 var settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
                 if (settings != null)
                 {
                     Settings = settings;
+                    StartupLogger.Log("Settings loaded successfully");
+                }
+                else
+                {
+                    StartupLogger.Log("Failed to deserialize settings, using defaults");
                 }
             }
             else
             {
+                StartupLogger.Log("Settings file does not exist, creating with defaults");
                 await SaveAsync();
             }
         }
         catch (Exception ex)
         {
+            StartupLogger.Log($"Error loading settings: {ex.Message}");
             System.Diagnostics.Debug.WriteLine($"Error loading settings: {ex.Message}");
             Settings = new AppSettings();
         }

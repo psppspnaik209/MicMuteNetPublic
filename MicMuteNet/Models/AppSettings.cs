@@ -62,7 +62,7 @@ public sealed class AppSettings
     public HotkeyConfiguration? HotkeyAlt { get; set; }
 
     // Overlay settings
-    public bool OverlayEnabled { get; set; } = true;
+    public bool OverlayEnabled { get; set; } = false;
     public OverlayVisibilityMode OverlayVisibility { get; set; } = OverlayVisibilityMode.Hidden;
     public double OverlayOpacity { get; set; } = 1.0;
     public double OverlayX { get; set; }
@@ -77,6 +77,7 @@ public sealed class AppSettings
     public bool RunAtStartup { get; set; }
     public bool StartMinimized { get; set; }
     public bool MinimizeOnClose { get; set; } = true;
+    public bool DefaultMuteOnStartup { get; set; } = false;
 
     // Window state
     public double? WindowX { get; set; }

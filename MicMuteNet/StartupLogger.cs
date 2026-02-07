@@ -4,6 +4,8 @@ internal static class StartupLogger
 {
     private static readonly string LogPath = Path.Combine(AppContext.BaseDirectory, "MicMuteNet.startup.log");
 
+    // Temporarily remove Conditional to debug release builds
+    // [System.Diagnostics.Conditional("DEBUG")]
     public static void Log(string message)
     {
         try
