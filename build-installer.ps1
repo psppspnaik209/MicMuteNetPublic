@@ -120,6 +120,24 @@ Name: "desktopicon"; Description: "Create desktop shortcut"
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
 
+[Code]
+function InitializeUninstall(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := True;
+  if MsgBox('Do you want to completely remove MicMuteNet and all of its components?', mbConfirmation, MB_YESNO) = IDNO then
+  begin
+    Result := False;
+  end;
+end;
+
+[UninstallRun]
+; Remove registry startup entry (normal mode)
+Filename: "reg.exe"; Parameters: "delete ""HKCU\Software\Microsoft\Windows\CurrentVersion\Run"" /v ""MicMuteNet"" /f"; Flags: runhidden; RunOnceId: "RemoveStartupReg"
+; Remove scheduled task (admin mode)  
+Filename: "schtasks.exe"; Parameters: "/Delete /TN ""MicMuteNet"" /F"; Flags: runhidden; RunOnceId: "RemoveStartupTask"
+
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
 "@
@@ -174,6 +192,24 @@ Name: "desktopicon"; Description: "Create desktop shortcut"
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
 
+[Code]
+function InitializeUninstall(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := True;
+  if MsgBox('Do you want to completely remove MicMuteNet and all of its components?', mbConfirmation, MB_YESNO) = IDNO then
+  begin
+    Result := False;
+  end;
+end;
+
+[UninstallRun]
+; Remove registry startup entry (normal mode)
+Filename: "reg.exe"; Parameters: "delete ""HKCU\Software\Microsoft\Windows\CurrentVersion\Run"" /v ""MicMuteNet"" /f"; Flags: runhidden; RunOnceId: "RemoveStartupReg"
+; Remove scheduled task (admin mode)
+Filename: "schtasks.exe"; Parameters: "/Delete /TN ""MicMuteNet"" /F"; Flags: runhidden; RunOnceId: "RemoveStartupTask"
+
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
 "@
@@ -227,6 +263,24 @@ Name: "desktopicon"; Description: "Create desktop shortcut"
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
+
+[Code]
+function InitializeUninstall(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := True;
+  if MsgBox('Do you want to completely remove MicMuteNet and all of its components?', mbConfirmation, MB_YESNO) = IDNO then
+  begin
+    Result := False;
+  end;
+end;
+
+[UninstallRun]
+; Remove registry startup entry (normal mode)
+Filename: "reg.exe"; Parameters: "delete ""HKCU\Software\Microsoft\Windows\CurrentVersion\Run"" /v ""MicMuteNet"" /f"; Flags: runhidden; RunOnceId: "RemoveStartupReg"
+; Remove scheduled task (admin mode)
+Filename: "schtasks.exe"; Parameters: "/Delete /TN ""MicMuteNet"" /F"; Flags: runhidden; RunOnceId: "RemoveStartupTask"
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent

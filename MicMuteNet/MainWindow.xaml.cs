@@ -230,8 +230,33 @@ public sealed partial class MainWindow : Window
             // Force the tray icon to be created immediately
             _trayIcon.ForceCreate();
 
+            // IMPORTANT: Delay menu creation to ensure tray icon is fully initialized
+            // This prevents the menu from being cut off on first launch
+            DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+            {
+                System.Threading.Thread.Sleep(100); // Small delay for tray icon initialization
+                CreateTrayContextMenu();
+            });
+            
+            System.Diagnostics.Debug.WriteLine("Tray icon created successfully");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to create tray icon: {ex.Message}");
+            StatusText.Text = $"Tray error: {ex.Message}";
+        }
+    }
+
+    private void CreateTrayContextMenu()
+    {
+        if (_trayIcon == null) return;
+
+        try
+        {
             // Create context menu with WinUI MenuFlyout
             var contextMenu = new MenuFlyout();
+            contextMenu.Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedLeft;
+            
             if (Content is FrameworkElement rootElement)
             {
                 contextMenu.XamlRoot = rootElement.XamlRoot;
@@ -255,13 +280,10 @@ public sealed partial class MainWindow : Window
 
             // Double click to show window
             _trayIcon.LeftClickCommand = new RelayCommand(() => InvokeOnUI(ShowWindow));
-            
-            System.Diagnostics.Debug.WriteLine("Tray icon created successfully");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to create tray icon: {ex.Message}");
-            StatusText.Text = $"Tray error: {ex.Message}";
+            System.Diagnostics.Debug.WriteLine($"Failed to create context menu: {ex.Message}");
         }
     }
 
@@ -605,8 +627,8 @@ public sealed partial class MainWindow : Window
         MuteToggleButton.IsChecked = _viewModel.IsMuted;
         MuteStatusText.Text = _viewModel.MuteStatusText;
 
-        // Update icon: E720 = Microphone, EE56 = MicrophoneOff (muted)
-        MuteIcon.Glyph = _viewModel.IsMuted ? "\uEE56" : "\uE720";
+        // Update icon: E720 = Microphone, E74F = MicOff (better mute icon)
+        MuteIcon.Glyph = _viewModel.IsMuted ? "\uE74F" : "\uE720";
 
         // Update description
         MuteDescriptionText.Text = _viewModel.IsMuted
@@ -630,7 +652,7 @@ public sealed partial class MainWindow : Window
     {
         if (_settingsService.Settings.OverlayEnabled && _overlayWindow != null)
         {
-            _overlayWindow.ShowMuteStatus(_viewModel.IsMuted);
+            _overlayWindow.ShowMuteStatus(_viewModel.IsMuted, _settingsService.Settings.OverlayDuration);
         }
     }
 
@@ -875,8 +897,10 @@ public sealed partial class MainWindow : Window
     private void StartWithWindows_Changed(object sender, RoutedEventArgs e)
     {
         if (_isLoadingSettings) return;
-        _settingsService.Settings.RunAtStartup = StartWithWindowsCheckBox.IsChecked == true;
-        SetStartWithWindows(_settingsService.Settings.RunAtStartup);
+        
+        var enable = StartWithWindowsCheckBox.IsChecked == true;
+        _settingsService.Settings.RunAtStartup = enable;
+        SetStartWithWindows(enable);
         _ = _settingsService.SaveAsync();
     }
 
@@ -894,37 +918,101 @@ public sealed partial class MainWindow : Window
         _ = _settingsService.SaveAsync();
     }
 
+    private void CollectLogs_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_isLoadingSettings) return;
+        var enabled = CollectLogsCheckBox.IsChecked == true;
+        _settingsService.Settings.CollectLogs = enabled;
+        StartupLogger.SetLoggingEnabled(enabled);
+        _ = _settingsService.SaveAsync();
+    }
+
     private void SetStartWithWindows(bool enable)
     {
         try
         {
-            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
-                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
+            var isAdmin = MicMuteNet.Helpers.AdminHelper.IsRunningAsAdministrator();
+            var exePath = Environment.ProcessPath ?? "";
             
-            if (key == null) return;
-            
+            if (string.IsNullOrEmpty(exePath))
+                return;
+
             const string appName = "MicMuteNet";
-            
-            if (enable)
+
+            if (isAdmin)
             {
-                // Get the executable path from the package
-                var exePath = Environment.ProcessPath ?? "";
-                if (!string.IsNullOrEmpty(exePath))
-                {
-                    key.SetValue(appName, $"\"{exePath}\"");
-                    StatusText.Text = "Startup enabled";
-                }
+                // Use Task Scheduler for admin mode
+                SetStartWithWindowsTaskScheduler(enable, exePath, appName);
             }
             else
             {
-                key.DeleteValue(appName, false);
-                StatusText.Text = "Startup disabled";
+                // Use registry for normal mode
+                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                    @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
+                
+                if (key == null) return;
+                
+                if (enable)
+                {
+                    key.SetValue(appName, $"\"{exePath}\"");
+                    StatusText.Text = "Startup enabled (Registry)";
+                }
+                else
+                {
+                    key.DeleteValue(appName, false);
+                    StatusText.Text = "Startup disabled";
+                }
             }
         }
         catch (Exception ex)
         {
             StatusText.Text = $"Failed to set startup: {ex.Message}";
-            System.Diagnostics.Debug.WriteLine($"Startup registry error: {ex}");
+            System.Diagnostics.Debug.WriteLine($"Startup error: {ex}");
+        }
+    }
+
+    private void SetStartWithWindowsTaskScheduler(bool enable, string exePath, string taskName)
+    {
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "schtasks.exe",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+
+            if (enable)
+            {
+                // Create scheduled task
+                psi.Arguments = $"/Create /SC ONLOGON /TN \"{taskName}\" /TR \"\\\"{exePath}\\\"\" /RL HIGHEST /F";
+                var process = System.Diagnostics.Process.Start(psi);
+                process?.WaitForExit();
+                
+                if (process?.ExitCode == 0)
+                {
+                    StatusText.Text = "Startup enabled (Task Scheduler - Admin Mode)";
+                }
+                else
+                {
+                    StatusText.Text = "Failed to create startup task";
+                }
+            }
+            else
+            {
+                // Delete scheduled task
+                psi.Arguments = $"/Delete /TN \"{taskName}\" /F";
+                var process = System.Diagnostics.Process.Start(psi);
+                process?.WaitForExit();
+                StatusText.Text = "Startup disabled";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Task Scheduler error: {ex.Message}";
+            System.Diagnostics.Debug.WriteLine($"Task Scheduler error: {ex}");
         }
     }
 
@@ -953,6 +1041,7 @@ public sealed partial class MainWindow : Window
         OverlayEnabledCheckBox.IsChecked = settings.OverlayEnabled;
         OverlayOpacitySlider.Value = settings.OverlayOpacity * 100;
         OverlayOpacityText.Text = $"{(int)(settings.OverlayOpacity * 100)}%";
+        OverlayDurationTextBox.Text = settings.OverlayDuration.ToString("F1");
         _overlayWindow?.SetOpacity(settings.OverlayOpacity);
         
         // Startup settings
@@ -999,6 +1088,75 @@ public sealed partial class MainWindow : Window
         
         _settingsService.Settings.OverlayOpacity = opacity;
         _overlayWindow?.SetOpacity(opacity);
+        _ = _settingsService.SaveAsync();
+    }
+
+    private void OverlayDuration_Changed(Microsoft.UI.Xaml.Controls.NumberBox sender, Microsoft.UI.Xaml.Controls.NumberBoxValueChangedEventArgs args)
+    {
+        if (_isLoadingSettings) return;
+        
+        // Allow both spinner and text input
+        if (!double.IsNaN(args.NewValue) && args.NewValue >= 0.1 && args.NewValue <= 5.0)
+        {
+            var duration = args.NewValue;
+            _settingsService.Settings.OverlayDuration = duration;
+            _ = _settingsService.SaveAsync();
+        }
+        else if (double.IsNaN(args.NewValue))
+        {
+            // User cleared the box or entered invalid text - reset to current value
+            sender.Value = _settingsService.Settings.OverlayDuration;
+        }
+    }
+
+    private void OverlayDurationTextBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (_isLoadingSettings) return;
+        ValidateAndSaveOverlayDuration();
+    }
+
+    private void OverlayDurationTextBox_KeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
+    {
+        if (e.Key == Windows.System.VirtualKey.Enter)
+        {
+            ValidateAndSaveOverlayDuration();
+            e.Handled = true;
+        }
+    }
+
+    private void ValidateAndSaveOverlayDuration()
+    {
+        if (double.TryParse(OverlayDurationTextBox.Text, out var duration))
+        {
+            duration = Math.Clamp(duration, 0.1, 5.0);
+            OverlayDurationTextBox.Text = duration.ToString("F1");
+            _settingsService.Settings.OverlayDuration = duration;
+            _ = _settingsService.SaveAsync();
+        }
+        else
+        {
+            // Invalid input - reset to current value
+            OverlayDurationTextBox.Text = _settingsService.Settings.OverlayDuration.ToString("F1");
+        }
+    }
+
+    private void DurationUp_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isLoadingSettings) return;
+        var current = _settingsService.Settings.OverlayDuration;
+        var newValue = Math.Clamp(current + 0.1, 0.1, 5.0);
+        OverlayDurationTextBox.Text = newValue.ToString("F1");
+        _settingsService.Settings.OverlayDuration = newValue;
+        _ = _settingsService.SaveAsync();
+    }
+
+    private void DurationDown_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isLoadingSettings) return;
+        var current = _settingsService.Settings.OverlayDuration;
+        var newValue = Math.Clamp(current - 0.1, 0.1, 5.0);
+        OverlayDurationTextBox.Text = newValue.ToString("F1");
+        _settingsService.Settings.OverlayDuration = newValue;
         _ = _settingsService.SaveAsync();
     }
 }

@@ -63,6 +63,7 @@ public sealed class AppSettings
 
     // Overlay settings
     public bool OverlayEnabled { get; set; } = false;
+    public double OverlayDuration { get; set; } = 2.0; // Duration in seconds
     public OverlayVisibilityMode OverlayVisibility { get; set; } = OverlayVisibilityMode.Hidden;
     public double OverlayOpacity { get; set; } = 1.0;
     public double OverlayX { get; set; }
@@ -78,6 +79,12 @@ public sealed class AppSettings
     public bool StartMinimized { get; set; }
     public bool MinimizeOnClose { get; set; } = true;
     public bool DefaultMuteOnStartup { get; set; } = false;
+    public bool CollectLogs { get; set; } = 
+#if DEBUG
+        true;  // Debug builds default to logging enabled
+#else
+        false; // Release builds default to logging disabled
+#endif
 
     // Window state
     public double? WindowX { get; set; }

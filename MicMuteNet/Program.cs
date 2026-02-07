@@ -1,14 +1,35 @@
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.ApplicationModel.DynamicDependency;
 using WinRT;
+using MicMuteNet.Helpers;
 
 namespace MicMuteNet;
 
 public static class Program
 {
+    private const string AppGuid = "A7B8C9D0-1234-5678-9ABC-DEF012345678";
+    private static SingleInstanceHelper? _singleInstance;
+
     [STAThread]
     public static void Main(string[] args)
     {
+        // Single instance check
+        _singleInstance = new SingleInstanceHelper(AppGuid);
+        if (!_singleInstance.IsFirstInstance)
+        {
+            StartupLogger.Log("Another instance is already running. Exiting.");
+            
+            // Show notification to user
+            System.Windows.Forms.MessageBox.Show(
+                "MicMuteNet is already running!\n\nCheck the system tray for the microphone icon.",
+                "MicMuteNet - Already Running",
+                System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Information);
+            
+            _singleInstance.Dispose();
+            return;
+        }
+
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
             StartupLogger.Log($"Unhandled exception: {e.ExceptionObject}");
         TaskScheduler.UnobservedTaskException += (_, e) =>

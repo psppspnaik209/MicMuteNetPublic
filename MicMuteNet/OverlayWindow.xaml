@@ -8,17 +8,20 @@
     mc:Ignorable="d"
     Title="MicMuteNet Overlay">
 
-    <!-- Transparent background - the Grid has no background -->
+    <!-- Fully transparent background so only the border shows -->
     <Grid Background="Transparent">
-        <!-- Modern styled overlay card -->
+        <!-- Modern overlay card with rounded corners and semi-transparent background -->
         <Border x:Name="OverlayBorder"
-            Background="#E61E1E2E"
+            Background="#D91E1E2E"
             CornerRadius="16"
             Padding="20,12"
-            BorderBrush="#6650C878"
+            BorderBrush="#8850C878"
             BorderThickness="2"
             HorizontalAlignment="Center"
             VerticalAlignment="Center">
+            <Border.Shadow>
+                <ThemeShadow />
+            </Border.Shadow>
 
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <!-- Icon circle -->

@@ -65,7 +65,28 @@ public sealed partial class OverlayWindow : Window
             HideOverlay();
         };
         
+        SetWindowIcon();
         ConfigureOverlayWindow();
+    }
+
+    private void SetWindowIcon()
+    {
+        try
+        {
+            var hwnd = WindowNative.GetWindowHandle(this);
+            var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
+            var appWindow = AppWindow.GetFromWindowId(windowId);
+            
+            var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Icons", "microphoneEnabled.ico");
+            if (File.Exists(iconPath))
+            {
+                appWindow.SetIcon(iconPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to set overlay window icon: {ex.Message}");
+        }
     }
 
     private void ConfigureOverlayWindow()
@@ -108,7 +129,7 @@ public sealed partial class OverlayWindow : Window
         UpdateVisuals();
     }
 
-    public void ShowMuteStatus(bool isMuted, bool autoHide = true)
+    public void ShowMuteStatus(bool isMuted, double durationSeconds = 2.0)
     {
         _isMuted = isMuted;
 
@@ -119,11 +140,12 @@ public sealed partial class OverlayWindow : Window
             // Show window
             ShowOverlay();
 
-            // Auto-hide after delay
-            if (autoHide)
+            // Auto-hide after duration
+            _hideTimer?.Stop();
+            if (_hideTimer != null)
             {
-                _hideTimer?.Stop();
-                _hideTimer?.Start();
+                _hideTimer.Interval = TimeSpan.FromSeconds(Math.Clamp(durationSeconds, 0.1, 5.0));
+                _hideTimer.Start();
             }
         });
     }

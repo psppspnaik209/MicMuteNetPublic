@@ -291,6 +291,39 @@
                         <Slider x:Name="OverlayOpacitySlider"
                             Minimum="20" Maximum="100" Value="80"
                             ValueChanged="OverlayOpacity_Changed" />
+                        
+                        <!-- Overlay Duration -->
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Display Duration (seconds)" VerticalAlignment="Center" />
+                            <StackPanel Orientation="Horizontal" Grid.Column="1" Spacing="4">
+                                <TextBox x:Name="OverlayDurationTextBox"
+                                    Text="2.0"
+                                    Width="80"
+                                    TextAlignment="Right"
+                                    LostFocus="OverlayDurationTextBox_LostFocus"
+                                    KeyDown="OverlayDurationTextBox_KeyDown" />
+                                <StackPanel Orientation="Vertical" Spacing="0">
+                                    <Button x:Name="DurationUpButton" 
+                                        Width="20" Height="16"
+                                        Padding="0" 
+                                        Click="DurationUp_Click"
+                                        ToolTipService.ToolTip="Increase">
+                                        <FontIcon Glyph="&#xE70E;" FontSize="8" />
+                                    </Button>
+                                    <Button x:Name="DurationDownButton"
+                                        Width="20" Height="16"
+                                        Padding="0"
+                                        Click="DurationDown_Click"
+                                        ToolTipService.ToolTip="Decrease">
+                                        <FontIcon Glyph="&#xE70D;" FontSize="8" />
+                                    </Button>
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -316,8 +349,11 @@
 
                         <CheckBox x:Name="DefaultMuteOnStartupCheckBox"
                             Content="Always mute microphone on startup"
-                            Checked="DefaultMuteOnStartup_Changed"
-                            Unchecked="DefaultMuteOnStartup_Changed" />
+                            Click="DefaultMuteOnStartup_Changed" />
+                        
+                        <CheckBox x:Name="CollectLogsCheckBox"
+                            Content="Collect diagnostic logs (for troubleshooting)"
+                            Click="CollectLogs_Changed" />
                     </StackPanel>
                 </StackPanel>
             </Border>
