@@ -90,35 +90,48 @@ public sealed partial class MainWindow : Window
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
-        await _viewModel.InitializeAsync();
+        try
+        {
+            await _viewModel.InitializeAsync();
 
-        // Create overlay window (must be after app is fully initialized)
-        _overlayWindow = new OverlayWindow();
+            // Create overlay window (must be after app is fully initialized)
+            _overlayWindow = new OverlayWindow();
 
-        // Set window and taskbar icon
-        SetWindowIcon();
+            // Set window and taskbar icon
+            SetWindowIcon();
 
-        // Initialize system tray
-        InitializeTrayIcon();
+            // Initialize system tray
+            InitializeTrayIcon();
 
-        // Populate devices
-        RefreshDeviceList();
+            // Populate devices
+            RefreshDeviceList();
 
-        // Set initial mute mode
-        SetMuteModeSelection(_viewModel.MuteMode);
+            // Set initial mute mode
+            SetMuteModeSelection(_viewModel.MuteMode);
 
-        // Set volume control state
-        VolumeControlCheckBox.IsChecked = _viewModel.VolumeControlEnabled;
-        VolumeSliderPanel.Visibility = _viewModel.VolumeControlEnabled
-            ? Visibility.Visible : Visibility.Collapsed;
+            // Set volume control state
+            VolumeControlCheckBox.IsChecked = _viewModel.VolumeControlEnabled;
+            VolumeSliderPanel.Visibility = _viewModel.VolumeControlEnabled
+                ? Visibility.Visible : Visibility.Collapsed;
 
-        // Load and register hotkey from settings
-        LoadHotkeyFromSettings();
+            // Load and register hotkey from settings
+            LoadHotkeyFromSettings();
 
-        // Load settings to UI
-        LoadSettingsToUI();
+            // Load settings to UI
+            LoadSettingsToUI();
 
-        UpdateMuteUI();
+            UpdateMuteUI();
+
+            if (_settingsService.Settings.StartMinimized)
+            {
+                HideWindow();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Initialization failed: {ex}");
+            StatusText.Text = $"Initialization failed: {ex.Message}";
+        }
     }
 
     private void LoadHotkeyFromSettings()
@@ -157,11 +170,17 @@ public sealed partial class MainWindow : Window
                 Icon = new System.Drawing.Icon(iconPath)
             };
 
+            ConfigureTrayMenuBehavior();
+
             // Force the tray icon to be created immediately
             _trayIcon.ForceCreate();
 
             // Create context menu with WinUI MenuFlyout
             var contextMenu = new MenuFlyout();
+            if (Content is FrameworkElement rootElement)
+            {
+                contextMenu.XamlRoot = rootElement.XamlRoot;
+            }
 
             var toggleItem = new MenuFlyoutItem { Text = "Toggle Mute" };
             toggleItem.Click += TrayToggle_Click;
@@ -180,7 +199,7 @@ public sealed partial class MainWindow : Window
             _trayIcon.ContextFlyout = contextMenu;
 
             // Double click to show window
-            _trayIcon.LeftClickCommand = new RelayCommand(ShowWindow);
+            _trayIcon.LeftClickCommand = new RelayCommand(() => InvokeOnUI(ShowWindow));
             
             System.Diagnostics.Debug.WriteLine("Tray icon created successfully");
         }
@@ -193,17 +212,57 @@ public sealed partial class MainWindow : Window
 
     private void TrayToggle_Click(object sender, RoutedEventArgs e)
     {
-        _viewModel.ToggleMuteCommand.Execute(null);
+        InvokeOnUI(() => _viewModel.ToggleMuteCommand.Execute(null));
+    }
+
+    private void ConfigureTrayMenuBehavior()
+    {
+        if (_trayIcon == null)
+        {
+            return;
+        }
+
+        TrySetEnumProperty(_trayIcon, "MenuActivation", "LeftOrRightClick");
+        TrySetEnumProperty(_trayIcon, "ContextMenuMode", "SecondWindow");
+    }
+
+    private static void TrySetEnumProperty(object target, string propertyName, string enumValue)
+    {
+        var property = target.GetType().GetProperty(propertyName);
+        if (property?.PropertyType.IsEnum != true || !property.CanWrite)
+        {
+            return;
+        }
+
+        try
+        {
+            var value = Enum.Parse(property.PropertyType, enumValue);
+            property.SetValue(target, value);
+        }
+        catch
+        {
+        }
     }
 
     private void TrayShow_Click(object sender, RoutedEventArgs e)
     {
-        ShowWindow();
+        InvokeOnUI(ShowWindow);
     }
 
     private void TrayExit_Click(object sender, RoutedEventArgs e)
     {
-        ExitApplication();
+        InvokeOnUI(ExitApplication);
+    }
+
+    private void InvokeOnUI(Action action)
+    {
+        if (DispatcherQueue.HasThreadAccess)
+        {
+            action();
+            return;
+        }
+
+        _ = DispatcherQueue.TryEnqueue(() => action());
     }
 
     private void UpdateTrayIcon()
@@ -224,19 +283,13 @@ public sealed partial class MainWindow : Window
 
     private void ShowWindow()
     {
-        var hwnd = WindowNative.GetWindowHandle(this);
-        var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
-        var appWindow = AppWindow.GetFromWindowId(windowId);
-        appWindow.Show();
+        WindowExtensions.Show(this);
         Activate();
     }
 
     private void HideWindow()
     {
-        var hwnd = WindowNative.GetWindowHandle(this);
-        var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
-        var appWindow = AppWindow.GetFromWindowId(windowId);
-        appWindow.Hide();
+        WindowExtensions.Hide(this);
     }
 
     private void ExitApplication()
