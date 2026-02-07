@@ -31,6 +31,14 @@ $hasx64Debug = Test-Path "$x64DebugPath\MicMuteNet.exe"
 $x64ReleasePath = Join-Path $ProjectDir "MicMuteNet\bin\x64\Release\net10.0-windows10.0.19041.0\"
 $hasx64Release = Test-Path "$x64ReleasePath\MicMuteNet.exe"
 
+# Check for x86 Debug build
+$x86DebugPath = Join-Path $ProjectDir "MicMuteNet\bin\x86\Debug\net10.0-windows10.0.19041.0\"
+$hasx86Debug = Test-Path "$x86DebugPath\MicMuteNet.exe"
+
+# Check for x86 Release build
+$x86ReleasePath = Join-Path $ProjectDir "MicMuteNet\bin\x86\Release\net10.0-windows10.0.19041.0\"
+$hasx86Release = Test-Path "$x86ReleasePath\MicMuteNet.exe"
+
 # Check for ARM64 Debug build
 $arm64DebugPath = Join-Path $ProjectDir "MicMuteNet\bin\ARM64\Debug\net10.0-windows10.0.19041.0\"
 $hasArm64Debug = Test-Path "$arm64DebugPath\MicMuteNet.exe"
@@ -41,14 +49,17 @@ $hasArm64Release = Test-Path "$arm64ReleasePath\MicMuteNet.exe"
 
 # Use Release if available, otherwise Debug
 $x64Path = if ($hasx64Release) { $x64ReleasePath } elseif ($hasx64Debug) { $x64DebugPath } else { $null }
+$x86Path = if ($hasx86Release) { $x86ReleasePath } elseif ($hasx86Debug) { $x86DebugPath } else { $null }
 $arm64Path = if ($hasArm64Release) { $arm64ReleasePath } elseif ($hasArm64Debug) { $arm64DebugPath } else { $null }
 
 $hasX64 = $x64Path -ne $null
+$hasX86 = $x86Path -ne $null
 $hasArm64 = $arm64Path -ne $null
 
-if (!$hasX64 -and !$hasArm64) {
+if (!$hasX64 -and !$hasX86 -and !$hasArm64) {
     Write-Host "ERROR: No builds found!" -ForegroundColor Red
-    Write-Host "Please build the project in Visual Studio first (Release configuration)" -ForegroundColor Yellow
+    Write-Host "Please build the project in Visual Studio first" -ForegroundColor Yellow
+    Write-Host "Supported: x64, x86, ARM64 (Debug or Release)" -ForegroundColor Yellow
     exit 1
 }
 
@@ -93,8 +104,8 @@ SolidCompression=yes
 PrivilegesRequired=lowest
 SetupIconFile=$ProjectDir\MicMuteNet\Assets\Icons\microphoneEnabled.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 
 [Files]
 Source: "$x64Path\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
@@ -104,7 +115,7 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{userdesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Tasks]
-Name: "desktopicon"; Description: "Create desktop shortcut"; Flags: unchecked
+Name: "desktopicon"; Description: "Create desktop shortcut"
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
@@ -120,6 +131,60 @@ Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: no
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host "? x64 installer created!" -ForegroundColor Green
+    }
+}
+
+# Create x86 installer
+if ($hasX86) {
+    Write-Host "`nCreating x86 installer..." -ForegroundColor Green
+    
+    $x86Script = @"
+#define MyAppName "MicMuteNet"
+#define MyAppVersion "1.0.0"
+#define MyAppPublisher "TNBB"
+#define MyAppExeName "MicMuteNet.exe"
+
+[Setup]
+AppId={{A7B8C9D0-1234-5678-9ABC-DEF012345677}
+AppName={#MyAppName}
+AppVersion={#MyAppVersion}
+AppPublisher={#MyAppPublisher}
+DefaultDirName={autopf}\{#MyAppName}
+DefaultGroupName={#MyAppName}
+OutputDir=$OutputBase
+OutputBaseFilename=MicMuteNet-Setup-x86
+Compression=lzma2
+SolidCompression=yes
+PrivilegesRequired=lowest
+SetupIconFile=$ProjectDir\MicMuteNet\Assets\Icons\microphoneEnabled.ico
+UninstallDisplayIcon={app}\{#MyAppExeName}
+ArchitecturesAllowed=x86compatible
+ArchitecturesInstallIn64BitMode=
+
+[Files]
+Source: "$x86Path\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
+
+[Icons]
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+Name: "{userdesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+
+[Tasks]
+Name: "desktopicon"; Description: "Create desktop shortcut"
+
+[UninstallDelete]
+Type: filesandordirs; Name: "{app}"
+
+[Run]
+Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
+"@
+    
+    $x86ScriptPath = Join-Path $OutputBase "setup-x86.iss"
+    Set-Content -Path $x86ScriptPath -Value $x86Script -Encoding UTF8
+    
+    & $InnoPath $x86ScriptPath
+    
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "? x86 installer created!" -ForegroundColor Green
     }
 }
 
@@ -158,7 +223,7 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{userdesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Tasks]
-Name: "desktopicon"; Description: "Create desktop shortcut"; Flags: unchecked
+Name: "desktopicon"; Description: "Create desktop shortcut"
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
