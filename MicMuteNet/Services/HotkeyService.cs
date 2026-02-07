@@ -65,10 +65,21 @@ public sealed class HotkeyService : IHotkeyService
 
     public HotkeyService()
     {
-        // Install the low-level keyboard hook
-        _hookProc = HookCallback;
-        _hookId = SetHook(_hookProc);
-        Debug.WriteLine($"Keyboard hook installed: {_hookId != IntPtr.Zero}");
+        try
+        {
+            StartupLogger.Log("HotkeyService constructing...");
+            // Install the low-level keyboard hook
+            _hookProc = HookCallback;
+            _hookId = SetHook(_hookProc);
+            StartupLogger.Log($"Keyboard hook installed: {_hookId != IntPtr.Zero}");
+            Debug.WriteLine($"Keyboard hook installed: {_hookId != IntPtr.Zero}");
+            StartupLogger.Log("HotkeyService constructed successfully.");
+        }
+        catch (Exception ex)
+        {
+            StartupLogger.Log($"ERROR in HotkeyService constructor: {ex}");
+            throw;
+        }
     }
 
     private IntPtr SetHook(LowLevelKeyboardProc proc)

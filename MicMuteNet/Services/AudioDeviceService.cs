@@ -16,8 +16,19 @@ public sealed class AudioDeviceService : IAudioDeviceService
 
     public AudioDeviceService()
     {
-        _enumerator = new MMDeviceEnumerator();
-        RefreshDevices();
+        try
+        {
+            StartupLogger.Log("AudioDeviceService constructing...");
+            _enumerator = new MMDeviceEnumerator();
+            StartupLogger.Log("MMDeviceEnumerator created.");
+            RefreshDevices();
+            StartupLogger.Log($"AudioDeviceService constructed. Found {_devices.Count} devices.");
+        }
+        catch (Exception ex)
+        {
+            StartupLogger.Log($"ERROR in AudioDeviceService constructor: {ex}");
+            throw;
+        }
     }
 
     public IReadOnlyList<MicrophoneDevice> Devices => _devices.AsReadOnly();

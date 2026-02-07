@@ -13,6 +13,11 @@ public interface ISettingsService
     AppSettings Settings { get; }
 
     /// <summary>
+    /// Gets the full path to the settings file.
+    /// </summary>
+    string SettingsPath { get; }
+
+    /// <summary>
     /// Loads settings from storage.
     /// </summary>
     Task LoadAsync();

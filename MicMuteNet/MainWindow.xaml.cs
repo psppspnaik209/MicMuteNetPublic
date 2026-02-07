@@ -12,6 +12,7 @@ using Windows.System;
 using WinRT.Interop;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics;
 
 namespace MicMuteNet;
 
@@ -32,31 +33,47 @@ public sealed partial class MainWindow : Window
 
     public MainWindow(MainViewModel viewModel)
     {
-        _viewModel = viewModel;
-        _hotkeyService = App.Services.GetRequiredService<IHotkeyService>();
-        _settingsService = App.Services.GetRequiredService<ISettingsService>();
-        _notificationService = App.Services.GetRequiredService<INotificationService>();
-        
-        InitializeComponent();
-
-        // Set window title and size
-        Title = "MicMuteNet";
-        SetWindowSize(420, 620);
-
-        // Subscribe to ViewModel changes
-        _viewModel.PropertyChanged += ViewModel_PropertyChanged;
-
-        // Subscribe to hotkey events
-        _hotkeyService.HotkeyPressed += OnHotkeyPressed;
-
-        // Handle window close to minimize to tray
-        AppWindow.Closing += AppWindow_Closing;
-
-        // Initialize UI when content is loaded
-        if (Content is FrameworkElement rootElement)
+        try
         {
-            rootElement.Loaded += MainWindow_Loaded;
-            rootElement.KeyDown += RootElement_KeyDown;
+            StartupLogger.Log("MainWindow constructing...");
+            _viewModel = viewModel;
+            
+            StartupLogger.Log("Getting services from DI...");
+            _hotkeyService = App.Services.GetRequiredService<IHotkeyService>();
+            _settingsService = App.Services.GetRequiredService<ISettingsService>();
+            _notificationService = App.Services.GetRequiredService<INotificationService>();
+            StartupLogger.Log("Services obtained.");
+            
+            StartupLogger.Log("Calling InitializeComponent()...");
+            InitializeComponent();
+            StartupLogger.Log("InitializeComponent() completed.");
+
+            // Set window title and size
+            Title = "MicMuteNet";
+            SetWindowSize(560, 620);
+
+            // Subscribe to ViewModel changes
+            _viewModel.PropertyChanged += ViewModel_PropertyChanged;
+
+            // Subscribe to hotkey events
+            _hotkeyService.HotkeyPressed += OnHotkeyPressed;
+
+            // Handle window close to minimize to tray
+            AppWindow.Closing += AppWindow_Closing;
+
+            // Initialize UI when content is loaded
+            if (Content is FrameworkElement rootElement)
+            {
+                rootElement.Loaded += MainWindow_Loaded;
+                rootElement.KeyDown += RootElement_KeyDown;
+            }
+
+            StartupLogger.Log("MainWindow constructed successfully.");
+        }
+        catch (Exception ex)
+        {
+            StartupLogger.Log($"FATAL ERROR in MainWindow constructor: {ex}");
+            throw;
         }
     }
 
@@ -92,18 +109,28 @@ public sealed partial class MainWindow : Window
     {
         try
         {
+            StartupLogger.Log("MainWindow_Loaded starting...");
+            
+            StartupLogger.Log("Calling _viewModel.InitializeAsync()...");
             await _viewModel.InitializeAsync();
+            StartupLogger.Log("ViewModel initialized.");
 
             // Create overlay window (must be after app is fully initialized)
+            StartupLogger.Log("Creating OverlayWindow...");
             _overlayWindow = new OverlayWindow();
+            StartupLogger.Log("OverlayWindow created.");
 
             // Set window and taskbar icon
+            StartupLogger.Log("Setting window icon...");
             SetWindowIcon();
 
             // Initialize system tray
+            StartupLogger.Log("Initializing tray icon...");
             InitializeTrayIcon();
+            StartupLogger.Log("Tray icon initialized.");
 
             // Populate devices
+            StartupLogger.Log("Refreshing device list...");
             RefreshDeviceList();
 
             // Set initial mute mode
@@ -115,6 +142,7 @@ public sealed partial class MainWindow : Window
                 ? Visibility.Visible : Visibility.Collapsed;
 
             // Load and register hotkey from settings
+            StartupLogger.Log("Loading hotkey settings...");
             LoadHotkeyFromSettings();
 
             // Load settings to UI
@@ -126,11 +154,24 @@ public sealed partial class MainWindow : Window
             {
                 HideWindow();
             }
+            
+            StartupLogger.Log("MainWindow_Loaded completed successfully.");
         }
         catch (Exception ex)
         {
+            StartupLogger.Log($"ERROR in MainWindow_Loaded: {ex}");
             System.Diagnostics.Debug.WriteLine($"Initialization failed: {ex}");
-            StatusText.Text = $"Initialization failed: {ex.Message}";
+            try
+            {
+                if (StatusText != null)
+                {
+                    StatusText.Text = $"Initialization failed: {ex.Message}";
+                }
+            }
+            catch
+            {
+                // StatusText might not be available yet
+            }
         }
     }
 
@@ -252,6 +293,29 @@ public sealed partial class MainWindow : Window
     private void TrayExit_Click(object sender, RoutedEventArgs e)
     {
         InvokeOnUI(ExitApplication);
+    }
+
+    private void OpenConfig_Click(object sender, RoutedEventArgs e)
+    {
+        var settingsPath = _settingsService.SettingsPath;
+        if (!File.Exists(settingsPath))
+        {
+            _ = _settingsService.SaveAsync();
+        }
+
+        try
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = settingsPath,
+                UseShellExecute = true
+            };
+            Process.Start(startInfo);
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Failed to open settings: {ex.Message}";
+        }
     }
 
     private void InvokeOnUI(Action action)

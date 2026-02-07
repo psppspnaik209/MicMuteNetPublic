@@ -31,14 +31,26 @@ public sealed partial class OverlayWindow : Window
 
     public OverlayWindow()
     {
-        InitializeComponent();
-        
-        Title = "MicMuteNet Overlay";
-
-        // Configure after content loads
-        if (Content is FrameworkElement root)
+        try
         {
-            root.Loaded += OnLoaded;
+            StartupLogger.Log("OverlayWindow constructing...");
+            InitializeComponent();
+            StartupLogger.Log("OverlayWindow InitializeComponent() completed.");
+            
+            Title = "MicMuteNet Overlay";
+
+            // Configure after content loads
+            if (Content is FrameworkElement root)
+            {
+                root.Loaded += OnLoaded;
+            }
+            
+            StartupLogger.Log("OverlayWindow constructed successfully.");
+        }
+        catch (Exception ex)
+        {
+            StartupLogger.Log($"ERROR in OverlayWindow constructor: {ex}");
+            throw;
         }
     }
 

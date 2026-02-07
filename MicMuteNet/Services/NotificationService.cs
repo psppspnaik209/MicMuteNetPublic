@@ -21,9 +21,20 @@ public sealed class NotificationService : INotificationService
 
     public NotificationService()
     {
-        var basePath = Path.Combine(AppContext.BaseDirectory, "Assets", "Sounds");
-        _mutedSoundPath = Path.Combine(basePath, "beep300.wav");    // Lower beep for muted
-        _unmutedSoundPath = Path.Combine(basePath, "beep750.wav");  // Higher beep for unmuted
+        try
+        {
+            StartupLogger.Log("NotificationService constructing...");
+            var basePath = Path.Combine(AppContext.BaseDirectory, "Assets", "Sounds");
+            _mutedSoundPath = Path.Combine(basePath, "beep300.wav");    // Lower beep for muted
+            _unmutedSoundPath = Path.Combine(basePath, "beep750.wav");  // Higher beep for unmuted
+            StartupLogger.Log($"NotificationService sound paths: muted={_mutedSoundPath}, unmuted={_unmutedSoundPath}");
+            StartupLogger.Log("NotificationService constructed successfully.");
+        }
+        catch (Exception ex)
+        {
+            StartupLogger.Log($"ERROR in NotificationService constructor: {ex}");
+            throw;
+        }
     }
 
     /// <summary>

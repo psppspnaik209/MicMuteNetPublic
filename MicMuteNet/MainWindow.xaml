@@ -17,20 +17,34 @@
         <StackPanel Spacing="16" MaxWidth="500">
 
             <!-- Header -->
-            <StackPanel Orientation="Horizontal" Spacing="16">
-                <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
-                    Glyph="&#xE720;"
-                    FontSize="32"
-                    Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="MicMuteNet"
-                        Style="{StaticResource TitleTextBlockStyle}" />
-                    <TextBlock x:Name="MuteStatusText"
-                        Text="Unmuted"
-                        Style="{StaticResource CaptionTextBlockStyle}"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" Spacing="16">
+                    <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
+                        Glyph="&#xE720;"
+                        FontSize="32"
+                        Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="MicMuteNet"
+                            Style="{StaticResource TitleTextBlockStyle}" />
+                        <TextBlock x:Name="MuteStatusText"
+                            Text="Unmuted"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
                 </StackPanel>
-            </StackPanel>
+                <Button Grid.Column="1"
+                    Click="OpenConfig_Click"
+                    ToolTipService.ToolTip="Open settings.json"
+                    VerticalAlignment="Center">
+                    <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
+                        Glyph="&#xE713;"
+                        FontSize="16" />
+                </Button>
+            </Grid>
 
             <!-- Microphone Selection -->
             <StackPanel Spacing="8">

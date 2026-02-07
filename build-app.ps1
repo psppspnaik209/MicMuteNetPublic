@@ -45,23 +45,34 @@ function Build-Project {
         Remove-Item $PortableDir -Recurse -Force
     }
     
-    # Publish self-contained with Windows App SDK bundled
-    Write-Host "Publishing self-contained release..." -ForegroundColor Yellow
+    New-Item -ItemType Directory -Path $PortableDir -Force | Out-Null
     
-    $result = & dotnet publish "$ProjectDir\MicMuteNet\MicMuteNet.csproj" `
+    # Use dotnet build instead of publish, then copy the output
+    Write-Host "Building release..." -ForegroundColor Yellow
+    
+    $result = & dotnet build "$ProjectDir\MicMuteNet\MicMuteNet.csproj" `
         -c Release `
         -r win-x64 `
         --self-contained true `
-        -p:PublishReadyToRun=true `
-        -p:PublishTrimmed=false `
-        -p:WindowsAppSDKSelfContained=true `
-        -o $PortableDir 2>&1
+        -p:WindowsPackageType=None `
+        -p:WindowsAppSDKSelfContained=true 2>&1
     
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Build failed!" -ForegroundColor Red
         Write-Host $result
         exit 1
     }
+    
+    # Copy the build output
+    Write-Host "Copying build output..." -ForegroundColor Yellow
+    $binPath = Join-Path $ProjectDir "MicMuteNet\bin\x64\Release\net10.0-windows10.0.19041.0\win-x64"
+    
+    if (!(Test-Path $binPath)) {
+        Write-Host "Build output path not found: $binPath" -ForegroundColor Red
+        exit 1
+    }
+    
+    Get-ChildItem -Path $binPath | Copy-Item -Destination $PortableDir -Recurse -Force
     
     Write-Host "Build succeeded!" -ForegroundColor Green
 }

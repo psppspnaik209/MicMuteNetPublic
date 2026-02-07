@@ -27,27 +27,80 @@ public partial class App : Application
     /// </summary>
     public App()
     {
-        InitializeComponent();
-        ConfigureServices();
+        try
+        {
+            StartupLogger.Log("App() constructor starting...");
+            
+            StartupLogger.Log("Calling InitializeComponent()...");
+            try
+            {
+                InitializeComponent();
+            }
+            catch (Exception initEx)
+            {
+                StartupLogger.Log($"InitializeComponent() threw exception: {initEx.GetType().FullName}");
+                StartupLogger.Log($"Message: {initEx.Message}");
+                StartupLogger.Log($"HResult: 0x{initEx.HResult:X8}");
+                if (initEx.InnerException != null)
+                {
+                    StartupLogger.Log($"Inner: {initEx.InnerException.GetType().FullName} - {initEx.InnerException.Message}");
+                }
+                StartupLogger.Log($"Stack: {initEx.StackTrace}");
+                throw;
+            }
+            StartupLogger.Log("InitializeComponent() completed.");
+            
+            StartupLogger.Log("Calling ConfigureServices()...");
+            ConfigureServices();
+            StartupLogger.Log("ConfigureServices() completed.");
+
+            UnhandledException += (_, e) =>
+            {
+                LogException("WinUI unhandled exception", e.Exception);
+                e.Handled = true;
+            };
+            
+            StartupLogger.Log("App constructed successfully.");
+        }
+        catch (Exception ex)
+        {
+            StartupLogger.Log($"FATAL ERROR in App() constructor: {ex}");
+            LogException("App constructor failure", ex);
+            throw;
+        }
     }
 
     private static void ConfigureServices()
     {
-        var services = new ServiceCollection();
+        try
+        {
+            StartupLogger.Log("Creating ServiceCollection...");
+            var services = new ServiceCollection();
 
-        // Register services
-        services.AddSingleton<IAudioDeviceService, AudioDeviceService>();
-        services.AddSingleton<ISettingsService, SettingsService>();
-        services.AddSingleton<IHotkeyService, HotkeyService>();
-        services.AddSingleton<INotificationService, NotificationService>();
+            // Register services
+            StartupLogger.Log("Registering services...");
+            services.AddSingleton<IAudioDeviceService, AudioDeviceService>();
+            services.AddSingleton<ISettingsService, SettingsService>();
+            services.AddSingleton<IHotkeyService, HotkeyService>();
+            services.AddSingleton<INotificationService, NotificationService>();
 
-        // Register ViewModels
-        services.AddTransient<MainViewModel>();
+            // Register ViewModels
+            StartupLogger.Log("Registering ViewModels...");
+            services.AddTransient<MainViewModel>();
 
-        // Register Views (but NOT OverlayWindow - created lazily in MainWindow)
-        services.AddTransient<MainWindow>();
+            // Register Views (but NOT OverlayWindow - created lazily in MainWindow)
+            StartupLogger.Log("Registering Views...");
+            services.AddTransient<MainWindow>();
 
-        Services = services.BuildServiceProvider();
+            StartupLogger.Log("Building ServiceProvider...");
+            Services = services.BuildServiceProvider();
+            StartupLogger.Log("ServiceProvider built successfully.");
+        }
+        catch (Exception ex)
+        {
+            StartupLogger.Log($"FATAL ERROR in ConfigureServices(): {ex}");
+            throw;
+        }
     }
 
     /// <summary>
@@ -55,7 +108,39 @@ public partial class App : Application
     /// </summary>
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        _window = Services.GetRequiredService<MainWindow>();
-        _window.Activate();
+        try
+        {
+            StartupLogger.Log("OnLaunched invoked.");
+            _window = Services.GetRequiredService<MainWindow>();
+            _window.Activate();
+            StartupLogger.Log("Main window activated.");
+        }
+        catch (Exception ex)
+        {
+            LogException("OnLaunched failure", ex);
+            throw;
+        }
+    }
+
+    private static void LogException(string context, Exception exception)
+    {
+        try
+        {
+            var logPath = Path.Combine(AppContext.BaseDirectory, "MicMuteNet.startup.log");
+            var line = $"{DateTimeOffset.Now:O} {context}: {exception}";
+            File.AppendAllText(logPath, line + Environment.NewLine);
+            
+            // Also log inner exceptions
+            var inner = exception.InnerException;
+            while (inner != null)
+            {
+                var innerLine = $"{DateTimeOffset.Now:O} Inner exception: {inner}";
+                File.AppendAllText(logPath, innerLine + Environment.NewLine);
+                inner = inner.InnerException;
+            }
+        }
+        catch
+        {
+        }
     }
 }

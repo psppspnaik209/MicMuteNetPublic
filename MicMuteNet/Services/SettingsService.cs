@@ -19,22 +19,33 @@ public sealed class SettingsService : ISettingsService
 
     public SettingsService()
     {
-        // Use %LOCALAPPDATA%\MicMuteNet for settings (works for both packaged and unpackaged)
-        var appDataFolder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "MicMuteNet");
-        
-        // Ensure the directory exists
-        if (!Directory.Exists(appDataFolder))
+        try
         {
-            Directory.CreateDirectory(appDataFolder);
+            StartupLogger.Log("SettingsService constructing...");
+            var settingsDirectory = AppContext.BaseDirectory;
+            StartupLogger.Log($"Settings directory: {settingsDirectory}");
+            
+            if (!Directory.Exists(settingsDirectory))
+            {
+                Directory.CreateDirectory(settingsDirectory);
+                StartupLogger.Log("Settings directory created.");
+            }
+
+            _settingsPath = Path.Combine(settingsDirectory, SettingsFileName);
+            StartupLogger.Log($"Settings path: {_settingsPath}");
+            Settings = new AppSettings();
+            StartupLogger.Log("SettingsService constructed successfully.");
         }
-        
-        _settingsPath = Path.Combine(appDataFolder, SettingsFileName);
-        Settings = new AppSettings();
+        catch (Exception ex)
+        {
+            StartupLogger.Log($"ERROR in SettingsService constructor: {ex}");
+            throw;
+        }
     }
 
     public AppSettings Settings { get; private set; }
+
+    public string SettingsPath => _settingsPath;
 
     public event EventHandler? SettingsChanged;
 
@@ -50,6 +61,10 @@ public sealed class SettingsService : ISettingsService
                 {
                     Settings = settings;
                 }
+            }
+            else
+            {
+                await SaveAsync();
             }
         }
         catch (Exception ex)
