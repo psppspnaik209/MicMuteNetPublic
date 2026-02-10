@@ -15,6 +15,10 @@ A modern, lightweight Windows application to mute your microphone globally using
 - **System Tray**: Runs silently in the background with tray icon support.
 - **Startup Options**: Auto-start with Windows, start minimized, and mute on startup.
 
+## Demo
+
+https://github.com/user-attachments/assets/00ec635d-f758-4069-9483-73acfa4f3e27
+
 ## Downloads
 
 [**Download Latest Release**](https://github.com/psppspnaik209/MicMuteNetPublic/releases/latest)
